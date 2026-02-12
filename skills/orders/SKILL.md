@@ -1,8 +1,8 @@
 ---
 name: ce-orders
-description: Commerce Engine order management - create orders, list/detail, shipment tracking, payment status, cancellation, returns, and refunds.
+description: Commerce Engine order management - create orders, list/detail, shipment tracking, payment status, cancellation, and refunds.
 license: MIT
-allowed-tools: WebFetch
+allowed-tools: Bash
 metadata:
   author: commercengine
   version: "1.0.0"
@@ -16,17 +16,17 @@ metadata:
 
 | Task | SDK Method |
 |------|-----------|
-| Create order | `sdk.order.createOrder({ cart_id, payment_method, return_url })` |
-| List orders | `sdk.order.listOrders({ query: { user_id, page, limit } })` |
-| Get order detail | `sdk.order.retrieveOrder(orderNumber)` |
-| Get shipments | `sdk.order.retrieveOrderShipments(orderNumber)` |
-| Get payments | `sdk.order.retrieveOrderPayments(orderNumber)` |
-| Payment status | `sdk.order.retrievePaymentStatus(orderNumber)` |
-| Retry payment | `sdk.order.retryPayment(orderNumber)` |
-| Cancel order | `sdk.order.cancelOrder(orderNumber, { cancellation_reason, refund_mode })` |
-| Create return | `sdk.order.createOrderReturn(orderNumber, { return_items })` |
-| Get return detail | `sdk.order.retrieveOrderReturnDetail(orderNumber, returnId)` |
-| Get refunds | `sdk.order.retrieveOrderRefunds(orderNumber)` |
+| Create order | `sdk.order.createOrder({ cart_id, payment_method? })` |
+| List orders | `sdk.order.listOrders({ page, limit })` |
+| Get order detail | `sdk.order.getOrderDetails({ order_number })` |
+| Get shipments | `sdk.order.listOrderShipments({ order_number })` |
+| Get payments | `sdk.order.listOrderPayments({ order_number })` |
+| Payment status | `sdk.order.getPaymentStatus(orderNumber)` — takes a string |
+| Retry payment | `sdk.order.retryOrderPayment({ order_number }, { payment_method })` |
+| Cancel order | `sdk.order.cancelOrder({ order_number }, { cancellation_reason, refund_mode })` |
+| Get refunds | `sdk.order.listOrderRefunds({ order_number })` |
+
+> **Note**: Returns are managed by the brand admin (Admin Portal), not the storefront. Customers can **cancel** within the cancellation window (`is_cancellation_allowed`); the admin then decides whether to schedule a return shipment or issue a direct refund. The default behavior is to refund if cancelled within the window. Return/replacement request APIs for storefront are under development.
 
 ## Decision Tree
 
@@ -38,25 +38,22 @@ User Request
     │       → See cart-checkout/ for full checkout flow
     │
     ├─ "My orders" / "Order history"
-    │   └─ sdk.order.listOrders({ query: { user_id } })
+    │   └─ sdk.order.listOrders({ page, limit })
     │
     ├─ "Order detail" / "Order #123"
-    │   └─ sdk.order.retrieveOrder(orderNumber)
+    │   └─ sdk.order.getOrderDetails({ order_number })
     │
     ├─ "Track shipment"
-    │   └─ sdk.order.retrieveOrderShipments(orderNumber)
+    │   └─ sdk.order.listOrderShipments({ order_number })
     │       → tracking_url, awb_no, status, eta_delivery
     │
     ├─ "Payment failed" / "Retry"
-    │   ├─ Check → sdk.order.retrievePaymentStatus(orderNumber)
-    │   └─ Retry → sdk.order.retryPayment(orderNumber)
+    │   ├─ Check → sdk.order.getPaymentStatus(orderNumber)
+    │   └─ Retry → sdk.order.retryOrderPayment({ order_number }, { payment_method })
     │
-    ├─ "Cancel order"
-    │   ├─ Check is_cancellation_allowed first
-    │   └─ sdk.order.cancelOrder(orderNumber, { ... })
-    │
-    └─ "Return" / "Refund"
-        └─ sdk.order.createOrderReturn(orderNumber, { return_items })
+    └─ "Cancel order"
+        ├─ Check is_cancellation_allowed first
+        └─ sdk.order.cancelOrder({ order_number }, { ... })
 ```
 
 ## Order Statuses
@@ -82,16 +79,22 @@ User Request
 
 ### Create Order from Cart
 
+> See `cart-checkout/references/payment-patterns.md` § "Building Payment Payloads" for all payment_method shapes.
+
 ```typescript
 const { data: order, error } = await sdk.order.createOrder({
   cart_id: cartId,
-  payment_method: "juspay",
-  return_url: "https://yoursite.com/order/confirm",
+  payment_method: {
+    payment_provider_slug: "juspay",
+    integration_type: "hyper-checkout",
+    gateway_reference_id: gatewayRefId,
+    return_url: "https://yoursite.com/order/confirm",
+    action: "paymentPage",
+  },
 });
 
 if (order.payment_required) {
-  // Redirect to payment gateway
-  window.location.href = order.payment_info.payment_url;
+  // Use payment_info to redirect or handle payment flow
 }
 ```
 
@@ -99,13 +102,9 @@ if (order.payment_required) {
 
 ```typescript
 const { data, error } = await sdk.order.listOrders({
-  query: {
-    user_id: userId,
-    page: 1,
-    limit: 10,
-    status: ["confirmed", "shipped", "delivered"],
-    sort_by: '{"order_date":"desc"}',
-  },
+  page: 1,
+  limit: 10,
+  sort_by: JSON.stringify({ order_date: "desc" }),
 });
 
 // data.orders → OrderList[] (summary view)
@@ -116,7 +115,8 @@ const { data, error } = await sdk.order.listOrders({
 
 ```typescript
 async function pollPaymentStatus(orderNumber: string) {
-  const { data, error } = await sdk.order.retrievePaymentStatus(orderNumber);
+  // Note: getPaymentStatus takes a string, not an object
+  const { data, error } = await sdk.order.getPaymentStatus(orderNumber);
 
   if (data.status === "pending") {
     setTimeout(() => pollPaymentStatus(orderNumber), 3000);
@@ -137,39 +137,28 @@ async function pollPaymentStatus(orderNumber: string) {
 
 ```typescript
 // First check if cancellation is allowed
-const { data: order } = await sdk.order.retrieveOrder(orderNumber);
-
-if (order.is_cancellation_allowed) {
-  const { data, error } = await sdk.order.cancelOrder(orderNumber, {
-    cancellation_reason: "Changed my mind",
-    refund_mode: "original_payment_mode",
-    feedback: "Optional feedback",
-  });
-}
-```
-
-### Initiate Return
-
-```typescript
-const { data, error } = await sdk.order.createOrderReturn(orderNumber, {
-  return_items: [
-    {
-      product_id: "prod_123",
-      sku: "SKU-001",
-      quantity: 1,
-      resolution: "refund",     // or "replacement"
-      return_reason: "Defective item",
-    },
-  ],
+const { data: order } = await sdk.order.getOrderDetails({
+  order_number: orderNumber,
 });
 
-// Return requests typically require approval via Admin Portal
+if (order.is_cancellation_allowed) {
+  const { data, error } = await sdk.order.cancelOrder(
+    { order_number: orderNumber },
+    {
+      cancellation_reason: "Changed my mind",
+      refund_mode: "original_payment_mode",
+      feedback: "Optional feedback",
+    }
+  );
+}
 ```
 
 ### Shipment Tracking
 
 ```typescript
-const { data, error } = await sdk.order.retrieveOrderShipments(orderNumber);
+const { data, error } = await sdk.order.listOrderShipments({
+  order_number: orderNumber,
+});
 
 data.shipments.forEach((shipment) => {
   console.log(shipment.status);        // "shipped", "delivered", etc.
@@ -184,17 +173,17 @@ data.shipments.forEach((shipment) => {
 | Level | Issue | Solution |
 |-------|-------|----------|
 | CRITICAL | Creating order without address | Cart must have billing/shipping addresses set before `createOrder()` |
-| HIGH | Not polling payment status | After gateway redirect, always poll `retrievePaymentStatus()` |
+| HIGH | Not polling payment status | After gateway redirect, always poll `getPaymentStatus()` |
 | HIGH | Showing cancel button when not allowed | Check `is_cancellation_allowed` from order detail first |
 | MEDIUM | Not handling multiple shipments | One order can have multiple shipments — iterate `data.shipments` |
 | MEDIUM | Missing `return_url` | Must provide `return_url` for payment gateway callback |
+| MEDIUM | Building a returns flow on storefront | Returns are admin-managed. Storefront supports cancellation only (`cancelOrder`). Show order/refund status, not a "Request Return" form. |
 | LOW | Not filtering orders by status | Use `status[]` query param to show relevant orders per tab |
 
 ## See Also
 
 - `cart-checkout/` - Cart management and checkout flow
 - `webhooks/` - Real-time order status updates via webhooks
-- `subscriptions/` - Recurring orders managed separately
 
 ## Documentation
 

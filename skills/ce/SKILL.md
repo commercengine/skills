@@ -1,9 +1,11 @@
 ---
 name: ce
-description: Commerce Engine router. Use when user asks about building a storefront, setting up the SDK, authentication, products, cart, checkout, orders, webhooks, subscriptions, or Next.js e-commerce patterns. Automatically routes to the specific skill based on their task.
+description: Commerce Engine router. Use when user asks about building a storefront, setting up the SDK, authentication, products, cart, checkout, orders, webhooks, or Next.js e-commerce patterns. Automatically routes to the specific skill based on their task.
 ---
 
 # Commerce Engine Skills Router
+
+These skills cover **B2C storefronts**. B2B storefronts share ~95% of the same patterns — the main difference is customer group pricing (see `ce-catalog` § "Customer Groups & Pricing" and `ce-setup` § "Default Headers").
 
 Based on what you're trying to do, here's the right skill to use:
 
@@ -25,9 +27,9 @@ Based on what you're trying to do, here's the right skill to use:
 - Reviews, recommendations
 
 **Cart & checkout** → Use `ce-cart-checkout`
-- Cart CRUD, coupons, loyalty points
-- Fulfillment options, hosted checkout
-- Payment gateway integration
+- **Hosted Checkout (recommended)** — pre-built, embeddable, saves 2-3 months
+- Custom checkout (advanced) — Cart CRUD, fulfillment, payment gateways
+- Coupons, loyalty points
 
 **Orders & returns** → Use `ce-orders`
 - Create orders from cart
@@ -35,14 +37,9 @@ Based on what you're trying to do, here's the right skill to use:
 - Cancellation, returns flow
 
 **Webhooks & events** → Use `ce-webhooks`
-- 14 event types (order, payment, shipment, subscription)
+- 14 event types (order, payment, refund, shipment)
 - Signature verification
 - Async processing patterns
-
-**Subscriptions** → Use `ce-subscriptions`
-- Standard & custom plans
-- Billing/shipping cycles, trials
-- Pause, revoke, coupon integration
 
 **Next.js patterns** → Use `ce-nextjs-patterns`
 - `storefront()` universal function
@@ -60,7 +57,6 @@ User Request
     ├─ "Cart" / "Checkout" / "Payments"      → ce-cart-checkout
     ├─ "Orders" / "Returns" / "Shipments"    → ce-orders
     ├─ "Webhooks" / "Events" / "Sync"        → ce-webhooks
-    ├─ "Subscriptions" / "Recurring"         → ce-subscriptions
     └─ "Next.js" / "SSR" / "Server Actions"  → ce-nextjs-patterns
 ```
 
@@ -73,7 +69,6 @@ If you know your task, you can directly access:
 - `/ce-cart-checkout` - Cart, checkout & payments
 - `/ce-orders` - Order management
 - `/ce-webhooks` - Webhook events & syncing
-- `/ce-subscriptions` - Subscription management
 - `/ce-nextjs-patterns` - Next.js patterns
 
 Or describe what you need and I'll recommend the right one.

@@ -1,8 +1,8 @@
 ---
 name: ce-webhooks
-description: Commerce Engine webhook events and syncing. 14 event types for orders, payments, shipments, subscriptions. Signature verification and async processing patterns.
+description: Commerce Engine webhook events and syncing. 14 event types for orders, payments, refunds, and shipments. Signature verification and async processing patterns.
 license: MIT
-allowed-tools: WebFetch
+allowed-tools: Bash
 metadata:
   author: commercengine
   version: "1.0.0"
@@ -25,11 +25,10 @@ metadata:
 
 | Category | Events |
 |----------|--------|
-| **Order** | `order.created`, `order.confirmed`, `order.cancelled` |
-| **Payment** | `payment.successful`, `payment.failed` |
-| **Shipment** | `shipment.created`, `shipment.shipped`, `shipment.delivered`, `shipment.cancelled` |
-| **Subscription** | `subscription.created`, `subscription.renewed`, `subscription.paused`, `subscription.revoked` |
-| **Return** | `return.initiated` |
+| **Order** | `order.created`, `order.confirmed`, `order.completed`, `order.cancelled` |
+| **Payment** | `payment.success`, `payment.failed`, `payment.retried` |
+| **Refund** | `payment.refund.initiated`, `payment.refund.success`, `payment.refund.failed` |
+| **Shipment** | `shipment.created`, `shipment.updated`, `shipment.delivered`, `shipment.cancelled` |
 
 ## Decision Tree
 
@@ -40,22 +39,21 @@ Webhook Event Received
     │
     ├─ order.created → Create order record in DB
     ├─ order.confirmed → Update order status, send confirmation email
+    ├─ order.completed → Mark order as fulfilled
     ├─ order.cancelled → Update status, process refund logic
     │
-    ├─ payment.successful → Mark order as paid
+    ├─ payment.success → Mark order as paid
     ├─ payment.failed → Notify customer, update status
+    ├─ payment.retried → Log retry attempt, update payment status
+    │
+    ├─ payment.refund.initiated → Log refund request
+    ├─ payment.refund.success → Update order, notify customer of refund
+    ├─ payment.refund.failed → Alert team, log failure
     │
     ├─ shipment.created → Log shipment, generate tracking
-    ├─ shipment.shipped → Send shipping notification
+    ├─ shipment.updated → Update tracking info, notify customer
     ├─ shipment.delivered → Update status, trigger review prompt
-    ├─ shipment.cancelled → Handle cancelled shipment
-    │
-    ├─ subscription.created → Provision access / schedule shipping
-    ├─ subscription.renewed → Process recurring billing
-    ├─ subscription.paused → Suspend service / pause shipping
-    ├─ subscription.revoked → Revoke access / stop shipping
-    │
-    └─ return.initiated → Create return record, notify fulfillment
+    └─ shipment.cancelled → Handle cancelled shipment
 ```
 
 ## Key Patterns
@@ -86,11 +84,17 @@ export async function POST(req: NextRequest) {
     case "order.confirmed":
       await handleOrderConfirmed(event.data);
       break;
-    case "payment.successful":
-      await handlePaymentSuccessful(event.data);
+    case "order.completed":
+      await handleOrderCompleted(event.data);
+      break;
+    case "payment.success":
+      await handlePaymentSuccess(event.data);
       break;
     case "payment.failed":
       await handlePaymentFailed(event.data);
+      break;
+    case "payment.refund.success":
+      await handleRefundSuccess(event.data);
       break;
     case "shipment.delivered":
       await handleShipmentDelivered(event.data);
@@ -203,7 +207,6 @@ async function handleOrderCreated(data: any) {
 ## See Also
 
 - `orders/` - Order data structure and API
-- `subscriptions/` - Subscription lifecycle events
 - `setup/` - Environment variable configuration
 
 ## Documentation

@@ -2,7 +2,7 @@
 name: ce-catalog
 description: Commerce Engine product catalog - products, variants, SKUs, categories, faceted search, reviews, and recommendations.
 license: MIT
-allowed-tools: WebFetch
+allowed-tools: Bash
 metadata:
   author: commercengine
   version: "1.0.0"
@@ -16,18 +16,18 @@ metadata:
 
 | Task | SDK Method |
 |------|-----------|
-| List products | `sdk.catalog.listProducts({ query: { page, limit, category_id } })` |
-| Get product detail | `sdk.catalog.getProduct({ product_id_or_slug })` |
-| List variants | `sdk.catalog.getProductVariants({ product_id })` |
-| Get variant detail | `sdk.catalog.getProductVariantDetail({ product_id, variant_id })` |
+| List products | `sdk.catalog.listProducts({ page, limit, category_id })` |
+| Get product detail | `sdk.catalog.getProductDetail({ product_id_or_slug })` |
+| List variants | `sdk.catalog.listProductVariants({ product_id })` |
+| Get variant detail | `sdk.catalog.getVariantDetail({ product_id, variant_id })` |
 | List SKUs (flat) | `sdk.catalog.listSkus()` |
 | List categories | `sdk.catalog.listCategories()` |
-| Search products | `sdk.catalog.searchProducts({ query: { q: searchTerm } })` |
-| Get reviews | `sdk.catalog.getProductReviews({ product_id })` |
+| Search products | `sdk.catalog.searchProducts({ q: searchTerm })` |
+| Get reviews | `sdk.catalog.listProductReviews({ product_id })` |
 | Submit review | `sdk.catalog.createProductReview({ product_id }, { ... })` |
-| Similar products | `sdk.catalog.getSimilarProducts({ query: { product_id } })` |
-| Upsell products | `sdk.catalog.getUpsellProducts({ query: { product_id } })` |
-| Cross-sell products | `sdk.catalog.getCrossSellProducts({ query: { product_id } })` |
+| Similar products | `sdk.catalog.listSimilarProducts({ product_id })` |
+| Upsell products | `sdk.catalog.listUpSellProducts({ product_id })` |
+| Cross-sell products | `sdk.catalog.listCrossSellProducts({ product_id })` |
 
 ## Product Hierarchy
 
@@ -59,24 +59,24 @@ User Request
     │   └─ Need hierarchy? → sdk.catalog.listProducts()
     │
     ├─ "Product detail page"
-    │   ├─ sdk.catalog.getProduct({ product_id_or_slug })
-    │   └─ If has_variant → sdk.catalog.getProductVariants({ product_id })
+    │   ├─ sdk.catalog.getProductDetail({ product_id_or_slug })
+    │   └─ If has_variant → sdk.catalog.listProductVariants({ product_id })
     │
     ├─ "Search"
-    │   └─ sdk.catalog.searchProducts({ query: { q } })
+    │   └─ sdk.catalog.searchProducts({ q })
     │       → Returns items + facets for filtering
     │
     ├─ "Categories" / "Navigation"
     │   └─ sdk.catalog.listCategories()
     │
     ├─ "Reviews"
-    │   ├─ Read → sdk.catalog.getProductReviews({ product_id })
+    │   ├─ Read → sdk.catalog.listProductReviews({ product_id })
     │   └─ Write → sdk.catalog.createProductReview({ product_id }, body)
     │
     └─ "Recommendations"
-        ├─ Similar → sdk.catalog.getSimilarProducts()
-        ├─ Upsell → sdk.catalog.getUpsellProducts()
-        └─ Cross-sell → sdk.catalog.getCrossSellProducts()
+        ├─ Similar → sdk.catalog.listSimilarProducts()
+        ├─ Upsell → sdk.catalog.listUpSellProducts()
+        └─ Cross-sell → sdk.catalog.listCrossSellProducts()
 ```
 
 ## Key Patterns
@@ -85,11 +85,9 @@ User Request
 
 ```typescript
 const { data, error } = await sdk.catalog.listProducts({
-  query: {
-    page: 1,
-    limit: 20,
-    category_id: "cat_123",  // Optional: filter by category
-  },
+  page: 1,
+  limit: 20,
+  category_id: ["cat_123"],  // Optional: filter by category
 });
 
 if (data) {
@@ -104,7 +102,7 @@ if (data) {
 
 ```typescript
 // Get product by slug or ID
-const { data, error } = await sdk.catalog.getProduct({
+const { data, error } = await sdk.catalog.getProductDetail({
   product_id_or_slug: "blue-running-shoes",
 });
 
@@ -112,7 +110,7 @@ const product = data?.product;
 
 // If product has variants, fetch them
 if (product?.has_variant) {
-  const { data: variantData } = await sdk.catalog.getProductVariants({
+  const { data: variantData } = await sdk.catalog.listProductVariants({
     product_id: product.id,
   });
   // variantData.variants contains all options with pricing and stock
@@ -123,7 +121,7 @@ if (product?.has_variant) {
 
 ```typescript
 const { data, error } = await sdk.catalog.searchProducts({
-  query: { q: "running shoes" },
+  q: "running shoes",
 });
 
 // data.items → matching products (flat SKU-level)
@@ -138,14 +136,21 @@ const { data, error } = await sdk.catalog.searchProducts({
 | `digital` | Downloadable or virtual products | No shipping required |
 | `bundle` | Group of products sold together | Contains sub-items |
 
+### Inventory & Availability
+
+- **`stock_available`** — Boolean, **always present** on Product, Variant, and SKU schemas. Use it to disable "Add to Cart" or show "Out of Stock" when `false`.
+- **`backorder`** — Boolean, set per product in Admin. When `true`, the product accepts orders even when out of stock. If your business allows backorders, keep the button enabled when `stock_available` is `false` but `backorder` is `true`.
+- **Inventory count** — Catalog APIs (`listProducts`, `listSkus`, etc.) support including inventory data in the response. Use this to display numeric stock levels in the UI.
+
 ### Customer Groups & Pricing
 
-Pass `x-customer-group-id` header for group-specific pricing:
+An advanced feature for B2B storefronts where the admin has configured customer groups (e.g., retailers, stockists, distributors). When `customer_group_id` is sent in API requests, product listings, pricing, and promotions are returned for that specific group.
 
-```typescript
-// SDK handles this via customer group context
-// Different customer groups see different prices, promotions, and subscription rates
-```
+**Do not pass the header per-call.** Set it once via `defaultHeaders` in SDK config (see `setup/` § "Default Headers"). After the user logs in, update the SDK instance with their group ID — all subsequent SDK calls automatically include it.
+
+### Wishlists
+
+Commerce Engine supports wishlists (add, remove, fetch) via SDK methods. These skills cover the main storefront flows — for wishlists and other secondary features, refer to the [LLM API reference](https://llm-docs.commercengine.io/) or [CE docs](https://www.commercengine.io/docs).
 
 ## Common Pitfalls
 
@@ -169,4 +174,4 @@ Pass `x-customer-group-id` header for group-specific pricing:
 
 - **Catalog Guide**: https://www.commercengine.io/docs/storefront/catalog
 - **API Reference**: https://www.commercengine.io/docs/api-reference/catalog
-- **LLM Reference**: https://llm-docs.commercengine.io/storefront/operations/list-all-products
+- **LLM Reference**: https://llm-docs.commercengine.io/storefront/operations/list-products

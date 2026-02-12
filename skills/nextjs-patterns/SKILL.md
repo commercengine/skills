@@ -2,7 +2,7 @@
 name: ce-nextjs-patterns
 description: Advanced Next.js patterns for Commerce Engine - storefront() function, CookieTokenStorage for SSR, StorefrontSDKInitializer, Server Actions, SSG, and ISR.
 license: MIT
-allowed-tools: WebFetch
+allowed-tools: Bash
 metadata:
   author: commercengine
   version: "1.0.0"
@@ -61,14 +61,13 @@ import { storefront } from "@/lib/storefront";
 
 // Root Layout requires explicit flag — no request context available
 const sdk = storefront({ isRootLayout: true });
-const { data: storeConfig } = await sdk.store.getStoreConfig();
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
         <StorefrontSDKInitializer />
-        <h1>Welcome to {storeConfig?.store_config?.brand.name}</h1>
+        <h1>Welcome to My Brand Store</h1>
         {children}
       </body>
     </html>
@@ -97,7 +96,7 @@ import { cookies } from "next/headers";
 export default async function ProductsPage() {
   const sdk = storefront(cookies());
   const { data, error } = await sdk.catalog.listProducts({
-    query: { page: 1, limit: 20 },
+    page: 1, limit: 20,
   });
 
   if (error) return <p>Error: {error.message}</p>;
@@ -131,7 +130,7 @@ export async function loginWithEmail(email: string) {
   });
 
   if (error) return { error: error.message };
-  return { otp_token: data.content.otp_token, otp_action: data.content.otp_action };
+  return { otp_token: data.otp_token, otp_action: data.otp_action };
 }
 
 export async function verifyOtp(otp: string, otpToken: string, otpAction: string) {
@@ -147,17 +146,16 @@ export async function verifyOtp(otp: string, otpToken: string, otpAction: string
   redirect("/account");
 }
 
-export async function addToCart(cartId: string, productId: string, variantId: string) {
+export async function addToCart(cartId: string, productId: string, variantId: string | null) {
   const sdk = storefront(cookies());
 
-  const { data, error } = await sdk.cart.addCartItem(cartId, {
-    product_id: productId,
-    variant_id: variantId,
-    quantity: 1,
-  });
+  const { data, error } = await sdk.cart.addDeleteCartItem(
+    { id: cartId },
+    { product_id: productId, variant_id: variantId, quantity: 1 }
+  );
 
   if (error) return { error: error.message };
-  return { cart: data };
+  return { cart: data.cart };
 }
 ```
 
@@ -170,7 +168,7 @@ import { storefront } from "@/lib/storefront";
 // Pre-render product pages at build time
 export async function generateStaticParams() {
   const sdk = storefront(); // No cookies at build time
-  const { data } = await sdk.catalog.listProducts({ query: { limit: 100 } });
+  const { data } = await sdk.catalog.listProducts({ limit: 100 });
 
   return (data?.products ?? []).map((product) => ({
     slug: product.slug,
@@ -179,7 +177,7 @@ export async function generateStaticParams() {
 
 export default async function ProductPage({ params }: { params: { slug: string } }) {
   const sdk = storefront(); // No cookies for static pages
-  const { data, error } = await sdk.catalog.getProduct({
+  const { data, error } = await sdk.catalog.getProductDetail({
     product_id_or_slug: params.slug,
   });
 
@@ -206,11 +204,10 @@ import { storefront } from "@/lib/storefront";
 export function AddToCartButton({ productId, variantId }: Props) {
   async function handleClick() {
     const sdk = storefront(); // No cookies in client components
-    const { data, error } = await sdk.cart.addCartItem(cartId, {
-      product_id: productId,
-      variant_id: variantId,
-      quantity: 1,
-    });
+    const { data, error } = await sdk.cart.addDeleteCartItem(
+      { id: cartId },
+      { product_id: productId, variant_id: variantId, quantity: 1 }
+    );
   }
 
   return <button onClick={handleClick}>Add to Cart</button>;

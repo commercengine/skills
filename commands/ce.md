@@ -26,7 +26,7 @@ skill({ name: 'ce' })
 ### Step 3: Identify task type from user request
 
 Analyze $ARGUMENTS to determine:
-- **Task type**: setup, auth, catalog, cart/checkout, orders, webhooks, subscriptions, Next.js patterns
+- **Task type**: setup, auth, catalog, cart/checkout, orders, webhooks, Next.js patterns
 - **Platform**: Next.js, React, Vue, Svelte, Solid, Node.js, Vanilla JS
 
 Use decision trees in SKILL.md to select correct skill.
@@ -43,18 +43,54 @@ Based on task type, load the appropriate skill:
 | Cart / checkout | `cart-checkout/` | SKILL.md + relevant reference |
 | Orders / returns | `orders/` | SKILL.md |
 | Webhooks | `webhooks/` | SKILL.md |
-| Subscriptions | `subscriptions/` | SKILL.md |
 | Next.js patterns | `nextjs-patterns/` | SKILL.md + relevant reference |
 
-### Step 5: Execute task
+### Step 5: Look up exact method signatures when needed
+
+**IMPORTANT**: Before generating any SDK code, verify the exact method signature from the LLM-optimized docs.
+
+**Option A — Append `.md` extension** (works with any tool including WebFetch):
+
+```
+# Look up a specific SDK method signature
+https://llm-docs.commercengine.io/storefront/operations/{operation-slug}.md
+
+# Browse all SDK methods
+https://llm-docs.commercengine.io/sdk/storefront.md
+
+# Look up a schema (e.g., Cart, Product, Order)
+https://llm-docs.commercengine.io/storefront/schemas/{SchemaName}.md
+
+# Browse all webhooks
+https://llm-docs.commercengine.io/webhooks/index.md
+
+# Look up a specific webhook
+https://llm-docs.commercengine.io/storefront/webhooks/{event-name}.md
+```
+
+**Option B — Use `curl` with custom header** (via Bash tool):
+
+```bash
+curl -s -H "Accept: text/markdown" https://llm-docs.commercengine.io/storefront/operations/{operation-slug}
+curl -s -H "Accept: text/markdown" https://llm-docs.commercengine.io/sdk/storefront
+curl -s -H "Accept: text/markdown" https://llm-docs.commercengine.io/storefront/schemas/{SchemaName}
+curl -s -H "Accept: text/markdown" https://llm-docs.commercengine.io/webhooks/
+```
+
+Either approach returns markdown. Without `.md` extension or the `Accept: text/markdown` header, you'll get HTML instead of parseable markdown.
+
+### Step 6: Execute task
 
 Apply Commerce Engine patterns from skill to complete user's request.
 
-### Step 6: Fallback for Unmatched Requests
+### Step 7: Fallback for Unmatched Requests
 
 If no skill matches the user's request:
 
-1. Search Commerce Engine docs for relevant content using WebFetch on `https://llm-docs.commercengine.io/`
+1. Search Commerce Engine docs for relevant content:
+   ```
+   https://llm-docs.commercengine.io/sdk/storefront.md
+   ```
 2. If still unmatched, respond:
 
 > I don't have a specific skill for this yet. Here are your options:
@@ -65,7 +101,7 @@ If no skill matches the user's request:
 >
 > Want me to help with the docs instead?
 
-### Step 7: Summarize
+### Step 8: Summarize
 
 ```
 === Commerce Engine Task Complete ===

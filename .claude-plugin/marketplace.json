@@ -8,7 +8,7 @@
   },
   "metadata": {
     "version": "1.0.0",
-    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, subscriptions, and Next.js patterns"
+    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, and Next.js patterns"
   },
   "plugins": [
     {
@@ -103,7 +103,7 @@
     },
     {
       "name": "ce-webhooks",
-      "description": "Commerce Engine webhook events - 14 event types for orders, payments, shipments, subscriptions with signature verification",
+      "description": "Commerce Engine webhook events - 14 event types for orders, payments, refunds, and shipments with signature verification",
       "version": "1.0.0",
       "author": {
         "name": "Commerce Engine",
@@ -115,21 +115,6 @@
       "license": "MIT",
       "category": "ecommerce",
       "keywords": ["webhooks", "events", "sync", "notifications"]
-    },
-    {
-      "name": "ce-subscriptions",
-      "description": "Commerce Engine subscription management - standard and custom plans, billing cycles, trials, pause/revoke",
-      "version": "1.0.0",
-      "author": {
-        "name": "Commerce Engine",
-        "email": "support@commercengine.io"
-      },
-      "source": "./skills/subscriptions",
-      "homepage": "https://www.commercengine.io/docs/storefront/subscriptions",
-      "repository": "https://github.com/commercengine/skills",
-      "license": "MIT",
-      "category": "ecommerce",
-      "keywords": ["subscriptions", "recurring", "billing", "plans"]
     },
     {
       "name": "ce-nextjs-patterns",

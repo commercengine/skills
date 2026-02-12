@@ -18,7 +18,6 @@ skills/
 │   ├── cart-checkout/        # Cart, checkout & payments
 │   ├── orders/               # Order management & returns
 │   ├── webhooks/             # Webhook events & syncing
-│   ├── subscriptions/        # Subscription management
 │   └── nextjs-patterns/      # Advanced Next.js patterns
 └── README.md                 # User-facing documentation
 ```
@@ -36,7 +35,6 @@ User Request
     ├─ "Cart" / "Checkout" / "Payments"      → cart-checkout/
     ├─ "Orders" / "Returns" / "Shipments"    → orders/
     ├─ "Webhooks" / "Events" / "Sync"        → webhooks/
-    ├─ "Subscriptions" / "Recurring"         → subscriptions/
     └─ "Next.js" / "SSR" / "Server Actions"  → nextjs-patterns/
 ```
 
@@ -176,6 +174,6 @@ Before submitting a new skill:
 - [Commerce Engine Documentation](https://www.commercengine.io/docs)
 - [LLM-Optimized API Reference](https://llm-docs.commercengine.io/)
 - [SDK Reference](https://www.commercengine.io/docs/sdk/installation)
-- [GitHub Issues](https://github.com/commercengine/skills/issues) - Request new skills
+- [GitHub Issues](https://github.com/tark-ai/skills/issues) - Request new skills
 
 When adding a new skill, update `.claude-plugin/marketplace.json` if it adds new keywords or categories.

@@ -2,7 +2,7 @@
 name: ce-setup
 description: Set up the Commerce Engine TypeScript SDK in any project. Framework detection, token storage selection, environment variables, and migration guidance.
 license: MIT
-allowed-tools: WebFetch
+allowed-tools: Bash
 metadata:
   author: commercengine
   version: "1.0.0"
@@ -100,7 +100,7 @@ npm install @commercengine/storefront-sdk
 
 ```typescript
 // lib/storefront.ts
-import { StorefrontSDK, Environment, BrowserTokenStorage } from "@commercengine/storefront-sdk";
+import StorefrontSDK, { Environment, BrowserTokenStorage } from "@commercengine/storefront-sdk";
 
 export const sdk = new StorefrontSDK({
   storeId: import.meta.env.VITE_STORE_ID,
@@ -124,7 +124,7 @@ npm install @commercengine/storefront-sdk
 
 ```typescript
 // src/lib/storefront.ts
-import { StorefrontSDK, Environment, MemoryTokenStorage } from "@commercengine/storefront-sdk";
+import StorefrontSDK, { Environment, MemoryTokenStorage } from "@commercengine/storefront-sdk";
 
 const sdk = new StorefrontSDK({
   storeId: process.env.CE_STORE_ID!,
@@ -169,6 +169,27 @@ if (error) {
 | `CE_STORE_ID` / `NEXT_PUBLIC_STORE_ID` | Yes | Your store identifier |
 | `CE_API_KEY` / `NEXT_PUBLIC_API_KEY` | Yes | Storefront API key (safe for client-side) |
 | `NEXT_BUILD_CACHE_TOKENS` | No | Set `true` for faster Next.js builds with token caching |
+
+## Default Headers
+
+The SDK supports `defaultHeaders` in the config — headers that are automatically sent with every API call. This is useful for B2B storefronts with customer groups (retailers, stockists, distributors), where pricing and promotions vary by group.
+
+```typescript
+const sdk = new StorefrontSDK({
+  storeId: "...",
+  apiKey: "...",
+  tokenStorage: new BrowserTokenStorage("myapp_"),
+  defaultHeaders: {
+    customer_group_id: "01JHS28V83KDWTRBXXJQRTEKA0",
+  },
+});
+```
+
+Set the `customer_group_id` after the user logs in (from the user's profile or auth response). All SDK methods that support customer group pricing will automatically receive it — no need to pass it on every call. See `catalog/` § "Customer Groups & Pricing" for what it affects.
+
+## Analytics
+
+Analytics are **server-side and automated**. Commerce Engine collects e-commerce events per the Segment spec. Merchants pipe these events into Segment, Rudderstack, or other tools via integrations in the Admin dashboard. **Nothing needs to be done on the storefront** to enable or disable analytics.
 
 ## Common Pitfalls
 

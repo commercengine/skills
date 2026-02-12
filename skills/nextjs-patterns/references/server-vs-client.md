@@ -25,12 +25,12 @@ export default async function AccountPage() {
   const sdk = storefront(cookies());
 
   // This uses the logged-in user's token from cookies
-  const { data: user } = await sdk.auth.getUser(userId);
-  const { data: orders } = await sdk.order.listOrders({
-    query: { user_id: userId },
+  const { data: userData } = await sdk.auth.getUserDetails({ id: userId });
+  const { data: ordersData } = await sdk.order.listOrders({
+    page: 1, limit: 10,
   });
 
-  return <div>Welcome, {user?.first_name}</div>;
+  return <div>Welcome, {userData?.user?.first_name}</div>;
 }
 ```
 
@@ -56,13 +56,13 @@ export async function loginAction(email: string) {
 }
 
 // Cart mutation — modifies cart state
-export async function addToCartAction(cartId: string, productId: string) {
+export async function addToCartAction(cartId: string, productId: string, variantId: string | null) {
   const sdk = storefront(cookies());
-  const { data, error } = await sdk.cart.addCartItem(cartId, {
-    product_id: productId,
-    quantity: 1,
-  });
-  return { data, error: error?.message };
+  const { data, error } = await sdk.cart.addDeleteCartItem(
+    { id: cartId },
+    { product_id: productId, variant_id: variantId, quantity: 1 }
+  );
+  return { data: data?.cart, error: error?.message };
 }
 ```
 
@@ -80,8 +80,8 @@ export function CartWidget() {
   useEffect(() => {
     async function loadCart() {
       const sdk = storefront(); // No cookies needed — browser handles it
-      const { data } = await sdk.cart.retrieveCartByUserId(userId);
-      setCart(data);
+      const { data } = await sdk.cart.getUserCart({ user_id: userId });
+      setCart(data?.cart);
     }
     loadCart();
   }, []);

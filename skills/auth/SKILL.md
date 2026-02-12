@@ -2,7 +2,7 @@
 name: ce-auth
 description: Commerce Engine authentication and user management. Anonymous auth, OTP login (email/phone/WhatsApp), password auth, token refresh, user profiles, and customer groups.
 license: MIT
-allowed-tools: WebFetch
+allowed-tools: Bash
 metadata:
   author: commercengine
   version: "1.0.0"
@@ -19,7 +19,7 @@ metadata:
 | Anonymous | `sdk.auth.getAnonymousToken()` | Every new visitor, required first step |
 | Email OTP | `sdk.auth.loginWithEmail()` → `sdk.auth.verifyOtp()` | Passwordless email login |
 | Phone OTP | `sdk.auth.loginWithPhone()` → `sdk.auth.verifyOtp()` | Passwordless phone login |
-| WhatsApp OTP | `sdk.auth.loginWithWhatsapp()` → `sdk.auth.verifyOtp()` | Passwordless WhatsApp login |
+| WhatsApp OTP | `sdk.auth.loginWithWhatsApp()` → `sdk.auth.verifyOtp()` | Passwordless WhatsApp login |
 | Password | `sdk.auth.loginWithPassword()` | Traditional email/password login |
 | Token Refresh | `sdk.auth.refreshToken()` | Renew expired access token |
 
@@ -35,11 +35,11 @@ User Request
     │   ├─ Passwordless (recommended)
     │   │   ├─ Email → loginWithEmail() → verifyOtp()
     │   │   ├─ Phone → loginWithPhone() → verifyOtp()
-    │   │   └─ WhatsApp → loginWithWhatsapp() → verifyOtp()
+    │   │   └─ WhatsApp → loginWithWhatsApp() → verifyOtp()
     │   └─ Password → loginWithPassword()
     │
     ├─ "User profile" / "Account"
-    │   └─ sdk.auth.getUser() / sdk.auth.updateUser()
+    │   └─ sdk.auth.getUserDetails() / sdk.auth.updateUserDetails()
     │
     └─ "Token expired" / 401 error
         └─ sdk.auth.refreshToken()
@@ -73,7 +73,7 @@ const { data, error } = await sdk.auth.loginWithEmail({
 
 if (error) return handleError(error);
 
-const { otp_token, otp_action } = data.content;
+const { otp_token, otp_action } = data;
 
 // 2. User enters OTP from their email...
 
@@ -124,10 +124,10 @@ const { data, error } = await sdk.auth.refreshToken({
 
 ```typescript
 // Get user details
-const { data, error } = await sdk.auth.getUser(userId);
+const { data, error } = await sdk.auth.getUserDetails({ id: userId });
 
 // Update user details
-const { data, error } = await sdk.auth.updateUser(userId, {
+const { data, error } = await sdk.auth.updateUserDetails({ id: userId }, {
   first_name: "Jane",
   last_name: "Doe",
 });
@@ -147,7 +147,7 @@ const { data, error } = await sdk.auth.changePassword({
 const { data } = await sdk.auth.forgotPassword({ email: "user@example.com" });
 // Returns otp_token → user enters OTP → then:
 const { data: resetData } = await sdk.auth.resetPassword({
-  otp_token: data.content.otp_token,
+  otp_token: data.otp_token,
   new_password: "newPass",
 });
 ```
@@ -178,4 +178,4 @@ Setting `register_if_not_exists: true` on login endpoints eliminates the need fo
 
 - **Authentication Guide**: https://www.commercengine.io/docs/storefront/authentication
 - **My Account**: https://www.commercengine.io/docs/storefront/my-account
-- **LLM Reference**: https://llm-docs.commercengine.io/storefront/operations/anonymous-user
+- **LLM Reference**: https://llm-docs.commercengine.io/storefront/operations/get-anonymous-token
