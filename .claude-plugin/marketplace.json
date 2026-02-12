@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "commerce-engine-skills",
+  "name": "commercengine/skills",
   "description": "Official Commerce Engine e-commerce skills for AI coding agents",
   "owner": {
     "name": "Commerce Engine",

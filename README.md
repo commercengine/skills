@@ -14,6 +14,9 @@
   <a href="https://www.commercengine.io/docs">
     <img alt="Documentation" src="https://img.shields.io/badge/documentation-commercengine-00bf6f.svg" />
   </a>
+  <a href="https://www.commercengine.io/docs/ai/overview">
+    <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet.svg" />
+  </a>
   <br />
   <br />
   <p>
@@ -33,10 +36,21 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 npx skills add commercengine/skills
 ```
 
-### Alternative Installation
+### Claude Code Plugin Marketplace
+
+```
+/plugin marketplace add commercengine/skills
+```
+
+Then browse and install skills with `/plugin`:
+
+```
+/plugin install ce@commercengine/skills
+```
+
+### Manual
 
 ```bash
-# Manual (Claude Code)
 git clone https://github.com/commercengine/skills ~/.claude/skills/commercengine
 ```
 
