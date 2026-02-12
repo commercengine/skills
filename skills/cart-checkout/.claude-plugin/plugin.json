@@ -1,0 +1,14 @@
+{
+  "name": "ce-cart-checkout",
+  "description": "Commerce Engine cart management, checkout flow, and payment integration with hosted checkout support",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/storefront/cart",
+  "repository": "https://github.com/commercengine/skills",
+  "keywords": ["cart", "checkout", "payments", "coupons", "fulfillment"],
+  "category": "ecommerce"
+}

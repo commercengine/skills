@@ -1,0 +1,14 @@
+{
+  "name": "ce-orders",
+  "description": "Commerce Engine order management - create orders, shipment tracking, payment status, cancellation, returns, and refunds",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/storefront/checkout",
+  "repository": "https://github.com/commercengine/skills",
+  "keywords": ["orders", "returns", "shipments", "payments", "tracking"],
+  "category": "ecommerce"
+}

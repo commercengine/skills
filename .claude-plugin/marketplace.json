@@ -1,0 +1,150 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "commerce-engine-skills",
+  "description": "Official Commerce Engine e-commerce skills for AI coding agents",
+  "owner": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, subscriptions, and Next.js patterns"
+  },
+  "plugins": [
+    {
+      "name": "ce",
+      "description": "Commerce Engine router - automatically routes to the right skill based on your e-commerce task",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/ce",
+      "homepage": "https://www.commercengine.io/docs",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["commerce-engine", "ecommerce", "router"]
+    },
+    {
+      "name": "ce-setup",
+      "description": "Set up the Commerce Engine TypeScript SDK in any project with framework detection and token storage selection",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/setup",
+      "homepage": "https://www.commercengine.io/docs/sdk/installation",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["setup", "sdk", "framework-detection", "token-storage"]
+    },
+    {
+      "name": "ce-auth",
+      "description": "Commerce Engine authentication - anonymous auth, OTP login (email/phone/WhatsApp), password auth, token refresh, user profile management",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/auth",
+      "homepage": "https://www.commercengine.io/docs/storefront/authentication",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["auth", "login", "otp", "anonymous", "tokens"]
+    },
+    {
+      "name": "ce-catalog",
+      "description": "Commerce Engine product catalog - products, variants, SKUs, categories, faceted search, reviews, and recommendations",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/catalog",
+      "homepage": "https://www.commercengine.io/docs/storefront/catalog",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["catalog", "products", "categories", "search", "variants"]
+    },
+    {
+      "name": "ce-cart-checkout",
+      "description": "Commerce Engine cart management, checkout flow, and payment integration with hosted checkout support",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/cart-checkout",
+      "homepage": "https://www.commercengine.io/docs/storefront/cart",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["cart", "checkout", "payments", "coupons", "fulfillment"]
+    },
+    {
+      "name": "ce-orders",
+      "description": "Commerce Engine order management - create orders, shipment tracking, payment status, cancellation, returns, and refunds",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/orders",
+      "homepage": "https://www.commercengine.io/docs/storefront/checkout",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["orders", "returns", "shipments", "payments", "tracking"]
+    },
+    {
+      "name": "ce-webhooks",
+      "description": "Commerce Engine webhook events - 14 event types for orders, payments, shipments, subscriptions with signature verification",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/webhooks",
+      "homepage": "https://www.commercengine.io/docs/sdk/nodejs-integration",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["webhooks", "events", "sync", "notifications"]
+    },
+    {
+      "name": "ce-subscriptions",
+      "description": "Commerce Engine subscription management - standard and custom plans, billing cycles, trials, pause/revoke",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/subscriptions",
+      "homepage": "https://www.commercengine.io/docs/storefront/subscriptions",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["subscriptions", "recurring", "billing", "plans"]
+    },
+    {
+      "name": "ce-nextjs-patterns",
+      "description": "Advanced Next.js patterns for Commerce Engine - storefront() function, SSR, Server Actions, SSG, and cookie-based token management",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/nextjs-patterns",
+      "homepage": "https://www.commercengine.io/docs/sdk/nextjs-integration",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["nextjs", "ssr", "server-actions", "cookies", "storefront"]
+    }
+  ]
+}

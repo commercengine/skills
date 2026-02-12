@@ -1,0 +1,14 @@
+{
+  "name": "ce-auth",
+  "description": "Commerce Engine authentication - anonymous auth, OTP login (email/phone/WhatsApp), password auth, token refresh, user profile management",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/storefront/authentication",
+  "repository": "https://github.com/commercengine/skills",
+  "keywords": ["auth", "login", "otp", "anonymous", "tokens"],
+  "category": "ecommerce"
+}

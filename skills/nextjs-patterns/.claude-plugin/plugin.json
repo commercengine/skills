@@ -1,0 +1,14 @@
+{
+  "name": "ce-nextjs-patterns",
+  "description": "Advanced Next.js patterns for Commerce Engine - storefront() function, SSR, Server Actions, SSG, and cookie-based token management",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/sdk/nextjs-integration",
+  "repository": "https://github.com/commercengine/skills",
+  "keywords": ["nextjs", "ssr", "server-actions", "cookies", "storefront"],
+  "category": "ecommerce"
+}

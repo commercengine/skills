@@ -1,0 +1,14 @@
+{
+  "name": "ce-setup",
+  "description": "Set up the Commerce Engine TypeScript SDK in any project with framework detection and token storage selection",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/sdk/installation",
+  "repository": "https://github.com/commercengine/skills",
+  "keywords": ["setup", "sdk", "framework-detection", "token-storage"],
+  "category": "ecommerce"
+}

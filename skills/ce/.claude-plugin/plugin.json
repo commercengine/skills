@@ -1,0 +1,14 @@
+{
+  "name": "ce",
+  "description": "Commerce Engine router - automatically routes to the right skill based on your e-commerce task",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs",
+  "repository": "https://github.com/commercengine/skills",
+  "keywords": ["commerce-engine", "ecommerce", "router"],
+  "category": "ecommerce"
+}
