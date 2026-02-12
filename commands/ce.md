@@ -12,7 +12,7 @@ If $ARGUMENTS contains `--update-skill`:
 
 1. Run the update command:
    ```bash
-   npx add-skill commercengine/skills -y
+   npx skills add commercengine/skills -y
    ```
 
 2. Output success message and stop (do not continue to other steps).

@@ -30,15 +30,12 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 ## Install
 
 ```bash
-npx add-skill commercengine/skills
+npx skills add commercengine/skills
 ```
 
 ### Alternative Installation
 
 ```bash
-# Using Vercel's skills CLI
-npx skills add commercengine/skills
-
 # Manual (Claude Code)
 git clone https://github.com/commercengine/skills ~/.claude/skills/commercengine
 ```
