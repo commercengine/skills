@@ -1,8 +1,8 @@
 <p align="center">
   <a href="https://www.commercengine.io?utm_source=github&utm_medium=ce_skills" target="_blank" rel="noopener noreferrer">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://images.tarkai.com/Commerce_Engine/Brand%20Assets/01%20-%20Logo/svg/CE_logo_whitebg.svg">
-      <img src="https://images.tarkai.com/Commerce_Engine/Brand%20Assets/01%20-%20Logo/svg/CE_logo_darkbg.svg" height="48" alt="Commerce Engine">
+      <source media="(prefers-color-scheme: dark)" srcset="https://images.tarkai.com/Commerce_Engine/Brand%20Assets/01%20-%20Logo/svg/CE_logo_darkbg.svg">
+      <img src="https://images.tarkai.com/Commerce_Engine/Brand%20Assets/01%20-%20Logo/svg/CE_logo_whitebg.svg" height="48" alt="Commerce Engine">
     </picture>
   </a>
   <br />
