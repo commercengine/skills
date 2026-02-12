@@ -174,6 +174,6 @@ Before submitting a new skill:
 - [Commerce Engine Documentation](https://www.commercengine.io/docs)
 - [LLM-Optimized API Reference](https://llm-docs.commercengine.io/)
 - [SDK Reference](https://www.commercengine.io/docs/sdk/installation)
-- [GitHub Issues](https://github.com/tark-ai/skills/issues) - Request new skills
+- [GitHub Issues](https://github.com/commercengine/skills/issues) - Request new skills
 
 When adding a new skill, update `.claude-plugin/marketplace.json` if it adds new keywords or categories.
