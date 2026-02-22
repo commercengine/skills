@@ -8,6 +8,8 @@ metadata:
   version: "1.0.0"
 ---
 
+> **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
+
 # Cart, Checkout & Payments
 
 > **Prerequisite**: SDK initialized and anonymous auth completed. See `setup/`.
@@ -63,17 +65,41 @@ See `references/hosted-checkout.md` for the complete reference.
 ### Quick Start
 
 ```bash
-npm install @commercengine/checkout
+npm install @commercengine/checkout @commercengine/storefront-sdk
 ```
 
 ```typescript
-// Initialize once at app entry point
-import { initCheckout } from "@commercengine/checkout/react";
+// Recommended default for new storefront apps:
+// Storefront SDK owns auth; Hosted Checkout runs in provided mode.
+import StorefrontSDK, { BrowserTokenStorage } from "@commercengine/storefront-sdk";
+import { initCheckout, getCheckout } from "@commercengine/checkout";
+
+const tokenStorage = new BrowserTokenStorage("ce_");
+
+const storefront = new StorefrontSDK({
+  storeId: process.env.NEXT_PUBLIC_STORE_ID!,
+  apiKey: process.env.NEXT_PUBLIC_API_KEY!,
+  tokenStorage,
+  onTokensUpdated: (accessToken, refreshToken) => {
+    // SDK -> checkout
+    getCheckout().updateTokens(accessToken, refreshToken);
+  },
+});
+
+const accessToken = await tokenStorage.getAccessToken();
+const refreshToken = await tokenStorage.getRefreshToken();
 
 initCheckout({
   storeId: process.env.NEXT_PUBLIC_STORE_ID!,
   apiKey: process.env.NEXT_PUBLIC_API_KEY!,
   environment: "production",
+  authMode: "provided",
+  accessToken: accessToken ?? undefined,
+  refreshToken: refreshToken ?? undefined,
+  onTokensUpdated: ({ accessToken, refreshToken }) => {
+    // checkout -> SDK
+    storefront.setTokens(accessToken, refreshToken);
+  },
 });
 ```
 
@@ -120,7 +146,7 @@ If your app already uses Commerce Engine auth (Storefront SDK or API), you **mus
 | Mode | When to use |
 |------|-------------|
 | `managed` (default) | Your app does **not** manage CE auth — checkout handles everything |
-| `provided` (advanced) | Your app **already** manages CE auth (SDK or API) — you **must** use this to avoid two independent sessions |
+| `provided` (recommended for storefront apps) | Your app **already** manages CE auth (SDK or API) — this should be the default for new storefront integrations |
 
 If the app manages its own CE auth and uses `managed` mode, two separate sessions are created — this breaks analytics, cart association, and order attribution. See `references/hosted-checkout.md` § "Auth Mode Guide" for sync patterns.
 

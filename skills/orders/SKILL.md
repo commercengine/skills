@@ -8,6 +8,8 @@ metadata:
   version: "1.0.0"
 ---
 
+> **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
+
 # Order Management
 
 > **Prerequisite**: Order creation requires a cart with items and addresses. See `cart-checkout/`.

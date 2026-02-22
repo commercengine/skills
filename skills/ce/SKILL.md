@@ -3,6 +3,8 @@ name: ce
 description: Commerce Engine router. Use when user asks about building a storefront, setting up the SDK, authentication, products, cart, checkout, orders, webhooks, or Next.js e-commerce patterns. Automatically routes to the specific skill based on their task.
 ---
 
+> **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
+
 # Commerce Engine Skills Router
 
 These skills cover **B2C storefronts**. B2B storefronts share ~95% of the same patterns — the main difference is customer group pricing (see `ce-catalog` § "Customer Groups & Pricing" and `ce-setup` § "Default Headers").

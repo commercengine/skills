@@ -52,7 +52,7 @@ Use **Checkout Studio** for checkout customization:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `authMode` | `"managed" \| "provided"` | `"managed"` | `"managed"`: checkout handles its own auth. `"provided"`: your app manages tokens and syncs them to checkout. |
+| `authMode` | `"managed" \| "provided"` | `"managed"` | `"managed"`: checkout handles its own auth. `"provided"`: your app manages tokens and syncs them to checkout (recommended for storefront apps already using Storefront SDK auth). |
 | `accessToken` | `string` | — | Initial access token (JWT). Used with `authMode: "provided"`. |
 | `refreshToken` | `string` | — | Initial refresh token. Used with `authMode: "provided"`. |
 
@@ -84,9 +84,9 @@ Use **Checkout Studio** for checkout customization:
 | `onClose` | — | Checkout overlay was closed. |
 | `onComplete` | `{ id, orderNumber }` | Order was placed successfully. |
 | `onCartUpdate` | `{ count, total, currency }` | Cart contents changed. |
-| `onLogin` | `{ accessToken, refreshToken, user, loginMethod }` | User logged in. `loginMethod` is `"whatsapp"`, `"phone"`, or `"email"`. |
-| `onLogout` | `{ accessToken, refreshToken, user }` | User logged out. |
-| `onTokenRefresh` | `{ accessToken, refreshToken }` | Tokens were automatically refreshed. |
+| `onTokensUpdated` | `{ accessToken, refreshToken }` | Tokens changed (anonymous auth, login, logout, refresh). Use this for token sync. |
+| `onLogin` | `{ user, loginMethod }` | User logged in (semantic event). `loginMethod` is `"whatsapp"`, `"phone"`, or `"email"`. |
+| `onLogout` | `{ user }` | User logged out (semantic event). |
 | `onSessionError` | — | Session became invalid. All tokens are cleared. |
 | `onError` | `{ message }` | A configuration or runtime error occurred. |
 
@@ -100,6 +100,7 @@ Use **Checkout Studio** for checkout customization:
 | `addToCart(productId, variantId, quantity?)` | Add an item. `variantId` can be `null`. `quantity` defaults to `1`. |
 | `updateTokens(accessToken, refreshToken?)` | Sync auth tokens from your app into checkout. |
 | `getCart()` | Returns `{ count, total, currency }`. Vanilla JS only. |
+| `getTokens()` | Returns latest `{ accessToken, refreshToken }` seen from `auth:tokens-updated`, or `null` if not received yet. Vanilla JS only. |
 | `destroy()` | Remove the iframe and clean up all listeners. Vanilla JS only. |
 | `destroyCheckout()` | Cleanup function — removes iframe and listeners. Exported from all framework bindings. Call on unmount. |
 | `getCheckout()` | Returns current checkout state for imperative access. Vanilla JS only. |
@@ -116,9 +117,9 @@ For event-driven integration using `checkout.on()`:
 | `close` | — | Overlay was closed. |
 | `complete` | `{ id, orderNumber }` | Order placed. |
 | `cart:updated` | `{ count, total, currency }` | Cart changed. |
-| `auth:login` | `{ accessToken, refreshToken, user, loginMethod }` | User logged in. |
-| `auth:logout` | `{ accessToken, refreshToken, user }` | User logged out. |
-| `auth:refresh` | `{ accessToken, refreshToken }` | Tokens refreshed. |
+| `auth:tokens-updated` | `{ accessToken, refreshToken }` | Tokens changed (anonymous auth, login, logout, refresh). |
+| `auth:login` | `{ user, loginMethod }` | User logged in (semantic event). |
+| `auth:logout` | `{ user }` | User logged out (semantic event). |
 | `auth:session-error` | — | Session invalid, tokens cleared. |
 | `error` | `{ message }` | Error occurred. |
 
@@ -468,21 +469,21 @@ initCheckout({
   apiKey: "ak_xxx",
   // authMode defaults to "managed"
 
-  onLogin: ({ accessToken, refreshToken, user, loginMethod }) => {
-    // User logged in inside checkout — sync to your app if needed
+  onTokensUpdated: ({ accessToken, refreshToken }) => {
+    // Single source for token sync
+    setAppTokens(accessToken, refreshToken);
+  },
+  onLogin: ({ user, loginMethod }) => {
+    // Semantic event (user + method)
     setAppUser(user);
-    setAppTokens(accessToken, refreshToken);
   },
-  onLogout: () => {
-    clearAppUser();
-  },
-  onTokenRefresh: ({ accessToken, refreshToken }) => {
-    setAppTokens(accessToken, refreshToken);
+  onLogout: ({ user }) => {
+    setAppUser(user ?? null);
   },
 });
 ```
 
-### Provided Mode (Advanced)
+### Provided Mode (Recommended for new storefront integrations)
 
 Your app is the single source of truth for auth. Checkout receives tokens from your app and never manages its own auth state.
 
@@ -498,16 +499,45 @@ initCheckout({
 });
 ```
 
-**Sync on every token change** — checkout will not be ready until tokens are provided, and will break silently if tokens go stale:
+**Two-way sync pattern (Storefront SDK ↔ Hosted Checkout):**
 
 ```typescript
-const { updateTokens } = useCheckout();
+import StorefrontSDK, { BrowserTokenStorage } from "@commercengine/storefront-sdk";
+import { initCheckout, getCheckout } from "@commercengine/checkout";
 
-// On login or token refresh in your app:
-updateTokens(newAccessToken, newRefreshToken);
+const tokenStorage = new BrowserTokenStorage("ce_");
 
-// On logout in your app — clears checkout session:
-updateTokens("", "");
+const storefront = new StorefrontSDK({
+  storeId: "store_xxx",
+  apiKey: "ak_xxx",
+  tokenStorage,
+  onTokensUpdated: (accessToken, refreshToken) => {
+    // SDK -> checkout
+    getCheckout().updateTokens(accessToken, refreshToken);
+  },
+});
+
+const accessToken = await tokenStorage.getAccessToken();
+const refreshToken = await tokenStorage.getRefreshToken();
+
+initCheckout({
+  storeId: "store_xxx",
+  apiKey: "ak_xxx",
+  authMode: "provided",
+  accessToken: accessToken ?? undefined,
+  refreshToken: refreshToken ?? undefined,
+
+  onTokensUpdated: ({ accessToken, refreshToken }) => {
+    // checkout -> SDK
+    storefront.setTokens(accessToken, refreshToken);
+  },
+  onLogin: ({ user, loginMethod }) => {
+    updateUserUI(user, loginMethod);
+  },
+  onLogout: ({ user }) => {
+    updateUserUI(user ?? null);
+  },
+});
 ```
 
 ### Auth Pitfalls

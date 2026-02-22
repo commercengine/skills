@@ -8,6 +8,8 @@ metadata:
   version: "1.0.0"
 ---
 
+> **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
+
 # Setting Up Commerce Engine
 
 This skill sets up the Commerce Engine TypeScript SDK for your project.
@@ -17,11 +19,55 @@ This skill sets up the Commerce Engine TypeScript SDK for your project.
 | Step | Action |
 |------|--------|
 | 1. Detect framework | Check `package.json` and config files |
-| 2. Install SDK | `npm install @commercengine/storefront-sdk` |
+| 2. Install SDKs | `@commercengine/storefront-sdk` (+ `@commercengine/checkout` if using Hosted Checkout) |
 | 3. Choose token storage | `BrowserTokenStorage` (SPA), `CookieTokenStorage` (SSR), `MemoryTokenStorage` (Node.js) |
 | 4. Set env vars | `CE_STORE_ID` and `CE_API_KEY` |
 | 5. Initialize SDK | Create `lib/storefront.ts` |
 | 6. Get anonymous token | `sdk.auth.getAnonymousToken()` before any API call |
+| 7. Hosted Checkout (if used) | Initialize checkout with `authMode: "provided"` and two-way token sync |
+
+## Canonical Setup (Storefront + Hosted Checkout)
+
+If the storefront uses Hosted Checkout, this is the canonical setup:
+
+- **Storefront SDK is token owner** (creation, refresh, storage).
+- **Hosted Checkout runs in `authMode: "provided"`**.
+- **Initialize checkout exactly once at app startup** (root app entry/bootstrap), not per route or per component render.
+- **Two-way sync is mandatory**:
+  - SDK -> checkout via `updateTokens(...)`
+  - checkout -> SDK via `onTokensUpdated`
+
+```typescript
+import StorefrontSDK, { BrowserTokenStorage } from "@commercengine/storefront-sdk";
+import { initCheckout, getCheckout } from "@commercengine/checkout";
+
+const tokenStorage = new BrowserTokenStorage("myapp_");
+
+export const storefront = new StorefrontSDK({
+  storeId: import.meta.env.VITE_STORE_ID,
+  apiKey: import.meta.env.VITE_API_KEY,
+  tokenStorage,
+  onTokensUpdated: (accessToken, refreshToken) => {
+    // SDK -> checkout
+    getCheckout().updateTokens(accessToken, refreshToken);
+  },
+});
+
+const accessToken = await tokenStorage.getAccessToken();
+const refreshToken = await tokenStorage.getRefreshToken();
+
+initCheckout({
+  storeId: import.meta.env.VITE_STORE_ID,
+  apiKey: import.meta.env.VITE_API_KEY,
+  authMode: "provided",
+  accessToken: accessToken ?? undefined,
+  refreshToken: refreshToken ?? undefined,
+  onTokensUpdated: ({ accessToken, refreshToken }) => {
+    // checkout -> SDK
+    storefront.setTokens(accessToken, refreshToken);
+  },
+});
+```
 
 ## Framework Detection
 
@@ -51,6 +97,12 @@ User Request: "Set up Commerce Engine" / "Add e-commerce"
     │   └─ NO → Install @commercengine/storefront-sdk
     │
     ├─ Choose token storage based on framework
+    │
+    ├─ Using Hosted Checkout?
+    │   ├─ YES → Install @commercengine/checkout
+    │   │        → Initialize checkout with authMode: "provided"
+    │   │        → Wire two-way token sync (SDK ↔ checkout)
+    │   └─ NO → SDK-only setup
     │
     ├─ Set environment variables
     │
@@ -196,6 +248,7 @@ Analytics are **server-side and automated**. Commerce Engine collects e-commerce
 | Level | Issue | Solution |
 |-------|-------|----------|
 | CRITICAL | Missing anonymous auth | Must call `sdk.auth.getAnonymousToken()` before any API call |
+| CRITICAL | App uses Storefront SDK auth + Hosted Checkout `managed` mode | Use `authMode: "provided"` and wire SDK ↔ checkout token sync |
 | CRITICAL | Exposing admin API keys | Only storefront API keys (`CE_API_KEY`) are safe for client-side |
 | HIGH | Wrong token storage for SSR | Use `CookieTokenStorage` for Next.js, not `BrowserTokenStorage` |
 | HIGH | Missing env vars | SDK throws if `storeId` or `apiKey` is missing — check env var names |

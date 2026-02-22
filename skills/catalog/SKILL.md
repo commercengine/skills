@@ -8,6 +8,8 @@ metadata:
   version: "1.0.0"
 ---
 
+> **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
+
 # Products & Catalog
 
 > **Prerequisite**: SDK initialized and anonymous auth completed. See `setup/`.
@@ -43,11 +45,11 @@ Product (has_variant: true)
   └─ Variant C (Color: Blue, Size: M) → SKU: "BLU-M-001"
 ```
 
-| Concept | Description | When to Use |
-|---------|-------------|-------------|
-| **Product** | The base item (e.g., "T-Shirt") | Product listing pages (PLPs) |
-| **Variant** | A specific option combo (Color + Size) | Product detail pages (PDPs), cart items |
-| **SKU** | Flat sellable unit with unique identifier | Inventory checks, direct purchase |
+| Concept | Return Type | Description | When to Use |
+|---------|-------------|-------------|-------------|
+| **Product** | `Product` | Base item with nested `variants` array | PLP where one card per product is desired (e.g., "T-Shirt" card showing color/size selectors) |
+| **Variant** | — | A specific option combo (Color + Size) | PDPs, cart items — accessed via `listProductVariants()` or nested in Product |
+| **SKU / Item** | `Item` | Flat sellable unit — each variant is its own record | PLP where a flat grid is desired (each color/size combo = separate card), or any page with filters/sorting/search |
 
 ## Decision Tree
 
@@ -55,16 +57,20 @@ Product (has_variant: true)
 User Request
     │
     ├─ "Show products" / "Product list"
-    │   ├─ Need flat list? → sdk.catalog.listSkus()
-    │   └─ Need hierarchy? → sdk.catalog.listProducts()
+    │   ├─ With filters/sorting/search? → sdk.catalog.searchProducts()
+    │   │   → Returns Item[] (flat SKUs) + facets for filtering
+    │   ├─ Flat grid (no filters)? → sdk.catalog.listSkus()
+    │   │   → Returns Item[] (flat SKUs)
+    │   └─ One card per product (group variants)? → sdk.catalog.listProducts()
+    │       → Returns Product[] (with nested variants)
     │
     ├─ "Product detail page"
     │   ├─ sdk.catalog.getProductDetail({ product_id_or_slug })
     │   └─ If has_variant → sdk.catalog.listProductVariants({ product_id })
     │
-    ├─ "Search"
+    ├─ "Search" / "Filter" / "Sort"
     │   └─ sdk.catalog.searchProducts({ q })
-    │       → Returns items + facets for filtering
+    │       → Returns Item[] + facets (brand, color, size, price range)
     │
     ├─ "Categories" / "Navigation"
     │   └─ sdk.catalog.listCategories()
@@ -83,6 +89,20 @@ User Request
 
 ### Product Listing Page (PLP)
 
+**For PLPs with filters, sorting, or search — use `searchProducts`** (recommended). It returns `Item[]` (flat SKUs) plus `facets` for building filter UI:
+
+```typescript
+const { data, error } = await sdk.catalog.searchProducts({
+  q: "running shoes",          // Optional: search query
+  // Pass facet filters, sorting, pagination as needed
+});
+
+// data.items → Item[] (flat list — each variant is its own record)
+// data.facets → attribute filters (brand, color, size, price range)
+```
+
+**For PLPs without filters** where one card per product is desired (variants grouped under a single card):
+
 ```typescript
 const { data, error } = await sdk.catalog.listProducts({
   page: 1,
@@ -90,18 +110,20 @@ const { data, error } = await sdk.catalog.listProducts({
   category_id: ["cat_123"],  // Optional: filter by category
 });
 
-if (data) {
-  data.products.forEach((product) => {
-    console.log(product.name, product.selling_price, product.slug);
-    // Check product.has_variant to know if options exist
-  });
-}
+// data.products → Product[] (each product may contain a variants array)
+// Check product.has_variant to know if options exist
+```
+
+**For a flat grid without filters** (each variant = separate card):
+
+```typescript
+const { data, error } = await sdk.catalog.listSkus();
+// Returns Item[] — same flat type as searchProducts
 ```
 
 ### Product Detail Page (PDP)
 
 ```typescript
-// Get product by slug or ID
 const { data, error } = await sdk.catalog.getProductDetail({
   product_id_or_slug: "blue-running-shoes",
 });
@@ -115,17 +137,6 @@ if (product?.has_variant) {
   });
   // variantData.variants contains all options with pricing and stock
 }
-```
-
-### Faceted Search
-
-```typescript
-const { data, error } = await sdk.catalog.searchProducts({
-  q: "running shoes",
-});
-
-// data.items → matching products (flat SKU-level)
-// data.facets → attribute filters (brand, color, size, price range)
 ```
 
 ### Product Types
@@ -156,7 +167,8 @@ Commerce Engine supports wishlists (add, remove, fetch) via SDK methods. These s
 
 | Level | Issue | Solution |
 |-------|-------|----------|
-| CRITICAL | Using `listProducts()` when you need flat items | Use `listSkus()` for flat purchasable units, `listProducts()` for hierarchy |
+| CRITICAL | Building PLP with filters using `listProducts()` | Use `searchProducts()` — it returns `Item[]` + facets for filtering, sorting, and search. `listProducts()` returns `Product[]` with no facets. |
+| CRITICAL | Confusing `Product` vs `Item` types | `listProducts()` returns `Product[]` (grouped, with variants array). `listSkus()` and `searchProducts()` return `Item[]` (flat — each variant is its own record). |
 | HIGH | Ignoring `has_variant` flag | Always check `has_variant` before trying to access variant data |
 | HIGH | Adding product to cart instead of variant | When `has_variant: true`, must add the specific variant, not the product |
 | MEDIUM | Not using `slug` for URLs | Use `slug` field for SEO-friendly URLs, `product_id_or_slug` accepts both |
