@@ -8,6 +8,7 @@ Commerce Engine Hosted Checkout is a pre-built, embeddable checkout that runs in
 - **PCI compliant** — payment data never touches your servers
 - **Always up to date** — new payment methods and features deployed automatically
 - **Framework agnostic** — React, Vue, Svelte, Solid, or plain HTML
+- **Store isolation by default** — each store loads from its own subdomain origin
 - **Zero layout shift** — iframe loads in the background
 
 ## Packages
@@ -16,6 +17,16 @@ Commerce Engine Hosted Checkout is a pre-built, embeddable checkout that runs in
 |---------|-------------|
 | `@commercengine/checkout` | Framework bindings for React, Vue, Svelte, and Solid |
 | `@commercengine/js` | Vanilla JS SDK, also available via CDN |
+
+## Checkout Studio (No-Code Customization)
+
+Use **Checkout Studio** for checkout customization:
+
+- **URL:** https://studio.checkout.commercengine.io
+- Configure appearance, features, login methods, drawer behavior, and payment settings
+- Save once to publish changes without storefront code changes
+
+**Assistant guidance:** If the user asks about checkout customization, always share this link first: https://studio.checkout.commercengine.io
 
 ## Configuration Reference
 
@@ -27,17 +38,15 @@ Commerce Engine Hosted Checkout is a pre-built, embeddable checkout that runs in
 |--------|------|---------|-------------|
 | `storeId` | `string` | — | Your Commerce Engine Store ID. Required unless `url` is provided. |
 | `apiKey` | `string` | — | Your Commerce Engine API Key. Required unless `url` is provided. |
-| `environment` | `"production" \| "staging"` | `"production"` | Determines which checkout app URL is loaded. |
-| `url` | `string` | — | Override the checkout URL. Useful for local development. |
+| `environment` | `"production" \| "staging"` | `"production"` | Determines which subdomain pattern is used: `https://{storeId}.checkout.commercengine.com` or `https://{storeId}.staging.checkout.commercengine.com`. |
+| `url` | `string` | — | Override checkout host resolution (preview builds or custom hosted checkout domains). |
 
 **Appearance:**
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `theme` | `"light" \| "dark" \| "system"` | `"system"` | Theme preference for the checkout UI. |
+| `theme` | `"light" \| "dark" \| "system"` | `"system"` | Per-session theme override. Primary visual configuration is managed in Checkout Studio. |
 | `appearance.zIndex` | `number` | `99999` | z-index for the checkout overlay container. |
-| `drawerDirection.mobile` | `"bottom" \| "top" \| "left" \| "right" \| "modal"` | `"bottom"` | Drawer slide direction on mobile viewports (<=767px). |
-| `drawerDirection.desktop` | `"bottom" \| "top" \| "left" \| "right" \| "modal"` | `"right"` | Drawer slide direction on desktop viewports (>767px). |
 
 **Authentication:**
 
@@ -58,15 +67,13 @@ Commerce Engine Hosted Checkout is a pre-built, embeddable checkout that runs in
 | `sessionMode` | `"continue-existing" \| "force-new"` | `"continue-existing"` | Whether to continue the user's existing cart or start fresh. |
 | `autoDetectQuickBuy` | `boolean` | `false` | Auto-detect quick buy params from the parent URL. |
 
-**Feature Flags:**
+**Managed in Checkout Studio (not SDK init options):**
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `features.loyalty` | `boolean` | `true` | Show loyalty points redemption. |
-| `features.coupons` | `boolean` | `true` | Show coupon code input. |
-| `features.collectInStore` | `boolean` | `false` | Enable collect-in-store fulfillment option. |
-| `features.freeShippingProgress` | `boolean` | `true` | Show free shipping progress bar. |
-| `features.productRecommendations` | `boolean` | `true` | Show product recommendations in cart. |
+- Feature flags (`loyalty`, `coupons`, `collectInStore`, `freeShippingProgress`, `productRecommendations`)
+- Login configuration (enabled methods and account switching behavior)
+- Drawer direction (mobile/desktop)
+- Payment provider selection
+- Brand appearance tokens (colors, typography, shape system, sizing)
 
 ### Callbacks
 
@@ -530,12 +537,12 @@ initCheckout({
 
 ## Environment URLs
 
-| Environment | Checkout App URL |
-|-------------|-----------------|
-| `production` | `https://checkout.commercengine.com` |
-| `staging` | `https://staging.checkout.commercengine.com` |
+| Environment | Checkout App URL Pattern |
+|-------------|--------------------------|
+| `production` | `https://{storeId}.checkout.commercengine.com` |
+| `staging` | `https://{storeId}.staging.checkout.commercengine.com` |
 
-The SDK itself is hosted at `https://cdn.commercengine.com/v1.js` (single deployment). The `environment` option only changes which checkout app URL is loaded inside the iframe.
+The SDK itself is hosted at `https://cdn.commercengine.com/v1.js` (single deployment). The `environment` option selects the hostname pattern, and `storeId` is encoded in the subdomain.
 
 ## Common Pitfalls
 
@@ -545,4 +552,4 @@ The SDK itself is hosted at `https://cdn.commercengine.com/v1.js` (single deploy
 | HIGH | Calling `useCheckout()` before `initCheckout()` | `initCheckout()` must run first — call it at app entry point, outside components |
 | HIGH | Not handling `onComplete` event | Always listen for order completion to show confirmation or redirect |
 | MEDIUM | Missing `browser` guard in SSR frameworks | Use `typeof window !== "undefined"` (Solid) or `browser` (SvelteKit) guard |
-| MEDIUM | Not using feature flags | Disable unused features (`loyalty`, `coupons`) for a cleaner checkout experience |
+| MEDIUM | Trying to set feature flags in SDK init config | Manage feature flags in Checkout Studio (remote config), not in SDK init options |
