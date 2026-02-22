@@ -19,9 +19,9 @@ Based on what you're trying to do, here's the right skill to use:
 - Environment variables (`CE_STORE_ID`, `CE_API_KEY`)
 
 **Authentication & login** → Use `ce-auth`
-- Anonymous auth, OTP login (email/phone/WhatsApp)
-- Password auth, token refresh
-- User profile management
+- Anonymous auth (always required)
+- OTP login (email/phone/WhatsApp), password auth, token refresh
+- **Note**: If using Hosted Checkout, login is handled inside the checkout drawer. Only build custom login UI if your app needs logged-in state outside of checkout (account pages, order history, etc.)
 
 **Products & catalog** → Use `ce-catalog`
 - Products, variants, SKUs
@@ -47,6 +47,45 @@ Based on what you're trying to do, here's the right skill to use:
 - `storefront()` universal function
 - `CookieTokenStorage` for SSR
 - Server Actions, SSG, ISR
+
+## Storefront Pages
+
+Canonical pages for a CE storefront and the skills/methods each needs:
+
+| Page | Example Route | Skills | Key SDK Methods |
+|------|---------------|--------|-----------------|
+| Home | `/` | catalog | `listProducts`, `listCategories`, recommendations (`listSimilarProducts`, etc.) |
+| Product Listing (PLP) | `/products`, `/categories/[slug]` | catalog | `searchProducts({ query, filters })` for filtered/search PLPs; `listProducts` for simple grids |
+| Product Detail (PDP) | `/products/[slug]` | catalog | `getProductDetail`, `listProductVariants` (if `has_variant`), `listProductReviews` |
+| Cart | Hosted Checkout drawer | cart-checkout | `useCheckout().openCart()`, `useCheckout().addToCart()` |
+| Checkout | Hosted Checkout drawer | cart-checkout | `useCheckout().openCheckout()` |
+| Login | `/login` | auth | `loginWithEmail` / `loginWithPhone`, `verifyOtp` |
+| Account | `/account` | auth | `getUserDetails`, `updateUserDetails`, `changePassword` |
+| Orders | `/account/orders` | orders | `listOrders` |
+| Order Detail | `/account/orders/[id]` | orders | `getOrderDetails`, `listOrderShipments`, `listOrderPayments` |
+
+> **Cart & Checkout routes**: With Hosted Checkout (recommended), cart and checkout are drawers — no dedicated pages needed. With custom checkout, add `/cart` and `/checkout` as separate pages (see `ce-cart-checkout`).
+
+> **Building a new storefront?** Start with `ce-setup`, then build pages in this order: Home → PLP → PDP → Cart/Checkout → Login → Account → Orders.
+>
+> **Converting an existing project?** Follow the migration checklist below.
+
+## Converting an Existing Project
+
+Step-by-step for replacing an existing backend (or mock data) with Commerce Engine:
+
+1. **Install SDK** — Follow `ce-setup`. Detect framework, install packages, set env vars, choose token storage.
+2. **Add anonymous auth** — Call `sdk.auth.getAnonymousToken()` at app startup. Every visitor needs this before any API call works.
+3. **Replace catalog data** — Swap mock/existing product data with `sdk.catalog.*` calls. Start here because catalog is read-only and low-risk.
+   - Product lists → `searchProducts` or `listProducts`
+   - Product detail → `getProductDetail` + `listProductVariants`
+   - Categories → `listCategories`
+4. **Add auth** — Replace existing login with CE auth (`ce-auth`). Use `loginWithEmail`/`loginWithPhone` + `verifyOtp`.
+5. **Add cart + checkout** — Install Hosted Checkout (`ce-cart-checkout`). Replace existing cart UI with `useCheckout()` hooks. Wire `authMode: "provided"` with two-way token sync.
+6. **Add orders** — Replace order history with `listOrders` / `getOrderDetails` (`ce-orders`).
+7. **Add SEO metadata** — Map CE product fields to meta tags (`ce-nextjs-patterns` § "SEO Metadata" for Next.js).
+
+> **Key principle**: Replace one data source at a time. Keep existing UI components — only swap the data layer underneath.
 
 ## Decision Tree
 

@@ -61,7 +61,7 @@ export { storefront } from "@commercengine/storefront-sdk-nextjs";
 import { StorefrontSDKInitializer } from "@commercengine/storefront-sdk-nextjs/client";
 import { storefront } from "@/lib/storefront";
 
-// Root Layout requires explicit flag — no request context available
+// Root Layout has no request context — use isRootLayout flag
 const sdk = storefront({ isRootLayout: true });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -69,7 +69,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <StorefrontSDKInitializer />
-        <h1>Welcome to My Brand Store</h1>
         {children}
       </body>
     </html>
@@ -215,6 +214,50 @@ export function AddToCartButton({ productId, variantId }: Props) {
   return <button onClick={handleClick}>Add to Cart</button>;
 }
 ```
+
+### SEO Metadata
+
+Use Next.js `generateMetadata` with CE product fields for meta tags, Open Graph, and structured data:
+
+```typescript
+// app/products/[slug]/page.tsx
+import { storefront } from "@/lib/storefront";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const sdk = storefront(); // No cookies — metadata runs at build time for static pages
+  const { data } = await sdk.catalog.getProductDetail({
+    product_id_or_slug: params.slug,
+  });
+
+  const product = data?.product;
+  if (!product) return { title: "Product Not Found" };
+
+  const image = product.images?.[0];
+
+  return {
+    title: product.name,
+    description: product.short_description,
+    openGraph: {
+      title: product.name,
+      description: product.short_description ?? undefined,
+      images: image ? [{ url: image.url_standard, alt: image.alternate_text ?? product.name }] : [],
+    },
+  };
+}
+```
+
+**CE field → meta tag mapping:**
+
+| Meta Tag | CE Field |
+|----------|----------|
+| `<title>` | `product.name` |
+| `meta description` | `product.short_description` |
+| `og:image` | `product.images[0].url_standard` |
+| `og:image:alt` | `product.images[0].alternate_text` |
+| Canonical URL | Build from `product.slug` |
+
+> For category/PLP pages, use the category name and description from `listCategories()`. For search pages, use the search query.
 
 ## Common Pitfalls
 

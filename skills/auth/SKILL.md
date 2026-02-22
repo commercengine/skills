@@ -14,6 +14,19 @@ metadata:
 
 > **Prerequisite**: SDK must be initialized. See `setup/` if not done.
 
+## When to Implement Auth Directly
+
+**If using Hosted Checkout (recommended):** Login/registration is handled inside the checkout drawer automatically. You do **not** need to build login UI or call the login/OTP endpoints below unless your storefront has features that require a logged-in user *outside* of placing orders — for example, a saved addresses page, order history, wishlists, or a loyalty dashboard.
+
+Anonymous auth (`getAnonymousToken`) is still always required — it's handled by `StorefrontSDKInitializer` in Next.js or manually in other frameworks (see `setup/`).
+
+When the user logs in via Hosted Checkout, tokens are synced back to the SDK automatically (via `onTokensUpdated`), so the rest of your app can use `getUserDetails()`, `listOrders()`, etc. without any additional auth work.
+
+**Build your own login UI only when:**
+- Your storefront has account pages (profile, addresses, orders) accessible before checkout
+- You want a persistent login state in the header/nav (e.g., "Hi, Jane" with user menu)
+- You need auth-gated pages that don't involve the checkout flow
+
 ## Quick Reference
 
 | Auth Method | Endpoint | Use Case |

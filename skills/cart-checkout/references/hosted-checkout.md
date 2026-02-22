@@ -195,21 +195,58 @@ function AddToCartButton({ productId, variantId }: Props) {
 
 ### Next.js
 
-Uses the React binding in a `"use client"` provider:
+Uses the React binding in a `"use client"` provider. Since Next.js storefronts use `storefront-sdk-nextjs` for data fetching, you need `authMode: "provided"` with two-way token sync.
+
+**Step 1: Configure `storefront()` with checkout sync**
+
+```typescript
+// lib/storefront.ts
+import { createStorefront } from "@commercengine/storefront-sdk-nextjs";
+import { getCheckout } from "@commercengine/checkout/react";
+
+export const storefront = createStorefront({
+  onTokensUpdated: (accessToken, refreshToken) => {
+    // SDK → checkout: sync on every token change (login, refresh, anonymous)
+    try {
+      getCheckout().updateTokens(accessToken, refreshToken);
+    } catch {
+      // Checkout not initialized yet — will receive tokens on init
+    }
+  },
+});
+```
+
+> **Note**: `createStorefront()` returns the same `storefront()` function — all existing usage (`storefront(cookies())`, `storefront()`, `storefront({ isRootLayout: true })`) continues to work.
+
+**Step 2: Create CheckoutProvider**
 
 ```tsx
-// providers.tsx ("use client")
+// providers/checkout-provider.tsx
 "use client";
+
 import { useEffect } from "react";
+import { storefront } from "@/lib/storefront";
 import { initCheckout, destroyCheckout } from "@commercengine/checkout/react";
 
 export function CheckoutProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    initCheckout({
-      storeId: process.env.NEXT_PUBLIC_STORE_ID!,
-      apiKey: process.env.NEXT_PUBLIC_API_KEY!,
-      environment: "production",
-    });
+    async function init() {
+      const sdk = storefront();
+      const accessToken = await sdk.getAccessToken();
+
+      initCheckout({
+        storeId: process.env.NEXT_PUBLIC_STORE_ID!,
+        apiKey: process.env.NEXT_PUBLIC_API_KEY!,
+        authMode: "provided",
+        accessToken: accessToken ?? undefined,
+        onTokensUpdated: ({ accessToken, refreshToken }) => {
+          // checkout → SDK: sync back
+          sdk.setTokens(accessToken, refreshToken);
+        },
+      });
+    }
+
+    init();
     return () => destroyCheckout();
   }, []);
 
@@ -217,20 +254,33 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
 }
 ```
 
+**Step 3: Wire into root layout**
+
 ```tsx
 // app/layout.tsx
-import { CheckoutProvider } from "./providers";
+import { StorefrontSDKInitializer } from "@commercengine/storefront-sdk-nextjs/client";
+import { storefront } from "@/lib/storefront";
+import { CheckoutProvider } from "@/providers/checkout-provider";
+
+const sdk = storefront({ isRootLayout: true });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <StorefrontSDKInitializer />
         <CheckoutProvider>{children}</CheckoutProvider>
       </body>
     </html>
   );
 }
 ```
+
+**How the sync works:**
+1. `StorefrontSDKInitializer` bootstraps anonymous tokens on first visit
+2. SDK's `onTokensUpdated` fires → pushes tokens to checkout via `getCheckout().updateTokens()`
+3. If user logs in via checkout, checkout's `onTokensUpdated` fires → pushes back to SDK via `sdk.setTokens()`
+4. For returning visitors, `CheckoutProvider` reads existing `accessToken` and passes it to `initCheckout`
 
 Then use `useCheckout()` in any client component.
 

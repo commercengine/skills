@@ -92,7 +92,7 @@ User Request: "Set up Commerce Engine" / "Add e-commerce"
     │
     ├─ Next.js detected?
     │   ├─ YES → Install @commercengine/storefront-sdk-nextjs
-    │   │        → Use storefront() function + StorefrontSDKInitializer
+    │   │        → Root layout: storefront({ isRootLayout: true }) + StorefrontSDKInitializer
     │   │        → See ce-nextjs-patterns for advanced usage
     │   └─ NO → Install @commercengine/storefront-sdk
     │
@@ -122,13 +122,17 @@ npm install @commercengine/storefront-sdk-nextjs
 export { storefront } from "@commercengine/storefront-sdk-nextjs";
 ```
 
-```typescript
+```tsx
 // app/layout.tsx
 import { StorefrontSDKInitializer } from "@commercengine/storefront-sdk-nextjs/client";
+import { storefront } from "@/lib/storefront";
+
+// Root Layout has no request context — use isRootLayout flag
+const sdk = storefront({ isRootLayout: true });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html>
+    <html lang="en">
       <body>
         <StorefrontSDKInitializer />
         {children}
@@ -137,6 +141,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 }
 ```
+
+> For the full `storefront()` mental model (server components, client components, server actions, SSG), see `ce-nextjs-patterns`.
+>
+> **Using Hosted Checkout?** Replace the simple re-export in `lib/storefront.ts` with `createStorefront()` to wire two-way token sync. See `ce-cart-checkout` → `references/hosted-checkout.md` § "Next.js".
 
 ```env
 # .env.local
