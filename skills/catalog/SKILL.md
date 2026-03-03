@@ -24,7 +24,7 @@ metadata:
 | Get variant detail | `sdk.catalog.getVariantDetail({ product_id, variant_id })` |
 | List SKUs (flat) | `sdk.catalog.listSkus()` |
 | List categories | `sdk.catalog.listCategories()` |
-| Search products | `sdk.catalog.searchProducts({ query: searchTerm })` |
+| Search products | `sdk.catalog.searchProducts({ query: searchTerm, filter?, sort?, facets? })` |
 | Get reviews | `sdk.catalog.listProductReviews({ product_id })` |
 | Submit review | `sdk.catalog.createProductReview({ product_id }, { ... })` |
 | Similar products | `sdk.catalog.listSimilarProducts({ product_id })` |
@@ -57,7 +57,7 @@ Product (has_variant: true)
 User Request
     │
     ├─ "Show products" / "Product list"
-    │   ├─ With filters/sorting/search? → sdk.catalog.searchProducts({ query, filters })
+    │   ├─ With filters/sorting/search? → sdk.catalog.searchProducts({ query, filter, sort, facets })
     │   │   → Returns Item[] (flat SKUs) + facet_distribution + facet_stats
     │   ├─ Flat grid (no filters)? → sdk.catalog.listSkus()
     │   │   → Returns Item[] (flat SKUs)
@@ -69,7 +69,7 @@ User Request
     │   └─ If has_variant → sdk.catalog.listProductVariants({ product_id })
     │
     ├─ "Search" / "Filter" / "Sort"
-    │   └─ sdk.catalog.searchProducts({ query, filters })
+    │   └─ sdk.catalog.searchProducts({ query, filter, sort, facets })
     │       → Returns Item[] + facet_distribution + facet_stats
     │
     ├─ "Categories" / "Navigation"
@@ -94,11 +94,9 @@ User Request
 ```typescript
 const { data, error } = await sdk.catalog.searchProducts({
   query: "running shoes",
-  filters: {
-    category: ["footwear"],
-    price_range: { min: 50, max: 200 },
-    brand: ["Nike", "Adidas"],       // facet names depend on product config
-  },
+  filter: "pricing.selling_price 50 TO 200 AND categories.name = footwear",
+  sort: ["pricing.selling_price:asc"],
+  facets: ["categories.name", "product_type", "tags"],
   page: 1,
   limit: 20,
 });
@@ -107,6 +105,12 @@ const { data, error } = await sdk.catalog.searchProducts({
 // data.facet_distribution → { [attribute]: { [value]: count } }
 // data.facet_stats → { [attribute]: { min, max } } (e.g. price range)
 // data.pagination → { page, limit, total, total_pages }
+
+// filter also accepts arrays — conditions are AND'd:
+// filter: ["product_type = physical", "rating >= 4"]
+//
+// Nested arrays express OR within AND:
+// filter: ["pricing.selling_price 50 TO 200", ["categories.name = footwear", "categories.name = apparel"]]
 ```
 
 **For PLPs without filters** where one card per product is desired (variants grouped under a single card):
@@ -175,7 +179,7 @@ Commerce Engine supports wishlists (add, remove, fetch) via SDK methods. These s
 
 | Level | Issue | Solution |
 |-------|-------|----------|
-| CRITICAL | Building PLP with filters using `listProducts()` | Use `searchProducts({ query, filters })` — it returns `data.skus` (`Item[]`) + `data.facet_distribution` + `data.facet_stats`. `listProducts()` returns `Product[]` with no facets. |
+| CRITICAL | Building PLP with filters using `listProducts()` | Use `searchProducts({ query, filter, sort, facets })` — it returns `data.skus` (`Item[]`) + `data.facet_distribution` + `data.facet_stats`. `listProducts()` returns `Product[]` with no facets. Uses Meilisearch filter syntax (e.g. `"rating > 4 AND product_type = physical"`). |
 | CRITICAL | Confusing `Product` vs `Item` types | `listProducts()` returns `Product[]` (grouped, with variants array). `listSkus()` and `searchProducts()` return `Item[]` (flat — each variant is its own record). |
 | HIGH | Ignoring `has_variant` flag | Always check `has_variant` before trying to access variant data |
 | HIGH | Adding product to cart instead of variant | When `has_variant: true`, must add the specific variant, not the product |

@@ -55,7 +55,7 @@ Canonical pages for a CE storefront and the skills/methods each needs:
 | Page | Example Route | Skills | Key SDK Methods |
 |------|---------------|--------|-----------------|
 | Home | `/` | catalog | `listProducts`, `listCategories`, recommendations (`listSimilarProducts`, etc.) |
-| Product Listing (PLP) | `/products`, `/categories/[slug]` | catalog | `searchProducts({ query, filters })` for filtered/search PLPs; `listProducts` for simple grids |
+| Product Listing (PLP) | `/products`, `/categories/[slug]` | catalog | `searchProducts({ query, filter, sort, facets })` for filtered/search PLPs; `listProducts` for simple grids |
 | Product Detail (PDP) | `/products/[slug]` | catalog | `getProductDetail`, `listProductVariants` (if `has_variant`), `listProductReviews` |
 | Cart | Hosted Checkout drawer | cart-checkout | `useCheckout().openCart()`, `useCheckout().addToCart()` |
 | Checkout | Hosted Checkout drawer | cart-checkout | `useCheckout().openCheckout()` |
