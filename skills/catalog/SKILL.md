@@ -142,14 +142,63 @@ const { data, error } = await sdk.catalog.getProductDetail({
 
 const product = data?.product;
 
-// If product has variants, fetch them
-if (product?.has_variant) {
+// Prefer product.variants from getProductDetail.
+// Fetch separately only if variants are missing or you specifically need the variants endpoint.
+if (product?.has_variant && (!product.variants || product.variants.length === 0)) {
   const { data: variantData } = await sdk.catalog.listProductVariants({
     product_id: product.id,
   });
   // variantData.variants contains all options with pricing and stock
 }
 ```
+
+### Canonical Variant URL State (PDP)
+
+Use option query params as source of truth for variant products: `?size=large&color=blue`.
+
+- Query keys should be plain `option.key` values (no custom prefixes).
+- Render option groups in `variant_options` order (do not derive option groups by iterating variants).
+- Match a variant only when **all** option keys match `variant.associated_options`.
+- Normalize option values consistently before comparison:
+  - `color` → compare with `option.value.name` (use `option.value.hexcode` for swatch UI)
+  - `single-select` → compare with `option.value`
+- `variant` query param is optional derived state:
+  - Set/update it when options resolve to one variant.
+  - Remove it when selection is incomplete/invalid.
+  - If URL has only `variant`, backfill option params from that variant.
+  - If URL has partial options + valid `variant`, fill only missing options from that variant.
+  - If `variant` is invalid, fall back to default (`is_default`, else first variant).
+- Disable Add to Cart until required options are selected and the resolved variant is purchasable (`stock_available` or `backorder`).
+- Disable option values that cannot lead to a purchasable variant under current partial selection.
+
+Use canonical SDK types directly:
+
+```typescript
+import type {
+  AssociatedOption,
+  Product,
+  Variant,
+  VariantOption,
+} from "@commercengine/storefront-sdk";
+```
+
+Do not derive these app-level types from OpenAPI schemas.
+
+Reference implementation:
+- `references/pdp-option-model.md` (URL state + variant matching + attribute/variantOption UI unification)
+
+### Attribute vs VariantOption (PDP Consistency)
+
+Treat `variant_options` as variant-driving attribute keys (usually `single-select` and `color`), not as a completely separate display domain.
+
+- Non-variant products can still expose `ProductAttribute` values for the same keys.
+- Brands may want the same UI treatment for those keys in PDP, even when product has no variants.
+- Keep one normalized option-display model:
+  - Variant product: selectable options from `variant_options` + `variant.associated_options`.
+  - Non-variant product: read-only option-style groups from `attributes` for keys/types the brand wants to style as options.
+- If `attribute.key` overlaps a `variant_option.key` on variant products, render the variant-option UI once and avoid duplicate attribute rows.
+- Use `attribute.key` alignment plus attribute `type` (`single-select`/`color`) as primary signals.
+- Cart rule stays strict: only variant products require variant resolution before Add to Cart.
 
 ### Product Types
 
@@ -181,6 +230,10 @@ Commerce Engine supports wishlists (add, remove, fetch) via SDK methods. These s
 |-------|-------|----------|
 | CRITICAL | Building PLP with filters using `listProducts()` | Use `searchProducts({ query, filter, sort, facets })` — it returns `data.skus` (`Item[]`) + `data.facet_distribution` + `data.facet_stats`. `listProducts()` returns `Product[]` with no facets. Uses Meilisearch filter syntax (e.g. `"rating > 4 AND product_type = physical"`). |
 | CRITICAL | Confusing `Product` vs `Item` types | `listProducts()` returns `Product[]` (grouped, with variants array). `listSkus()` and `searchProducts()` return `Item[]` (flat — each variant is its own record). |
+| CRITICAL | Using `variant` as PDP URL source of truth for multi-option products | Keep option params (`size`, `color`, etc.) canonical; treat `variant` as derived/backfill-only. |
+| HIGH | Resolving variants from a single option or `variant_options` only | Match against `variant.associated_options` across **all** option keys. |
+| HIGH | Deriving option/variant types from generated schemas in app code | Import SDK types directly from `@commercengine/storefront-sdk` (`AssociatedOption`, `VariantOption`, `Variant`, `Product`). |
+| MEDIUM | Treating `attributes` and `variant_options` as unrelated PDP UIs | Build a unified option-display model so shared keys (e.g. `metal`) can render consistently across variant and non-variant products. |
 | HIGH | Ignoring `has_variant` flag | Always check `has_variant` before trying to access variant data |
 | HIGH | Adding product to cart instead of variant | When `has_variant: true`, must add the specific variant, not the product |
 | MEDIUM | Not using `slug` for URLs | Use `slug` field for SEO-friendly URLs, `product_id_or_slug` accepts both |
