@@ -63,29 +63,33 @@ Mount this once in the root layout (`app/layout.tsx` for Next.js, `__root.tsx` f
 
 **Why bootstrap matters**: Cold server-component reads without prior client bootstrap cannot reliably persist session cookies. The first session-bound call in a Server Component may create an anonymous token for that request, but session continuity is not guaranteed without the client bootstrap.
 
-### Public Reads for Pre-rendering
+### Pre-rendering for SEO & Initial Load
 
-Both frameworks use `publicStorefront()` for any data that should be fetched at build time or during static generation:
+Use `publicStorefront()` in route loaders (TanStack Start) or `generateStaticParams` / Server Components (Next.js) to pre-render catalog pages. This gives you excellent SEO and fast initial page loads:
 
 ```typescript
-// Route loader (TanStack Start) or generateStaticParams (Next.js)
+// Route loader (TanStack Start) or Server Component (Next.js)
 const sdk = storefront.publicStorefront();
 const { data } = await sdk.catalog.listProducts({ limit: 100 });
 ```
 
 `publicStorefront()` never creates sessions, never reads/writes cookies, and is safe for build-time, pre-render, and ISR contexts.
 
-### Session-Bound Mutations
+### Client-Side Fetching After Hydration
 
-Auth, cart, checkout, account, and order flows require the session accessor:
+Once the app is hydrated, **client-side fetching is equally fast and much less complex**. There is no need to wrap SDK calls in server functions — the SDK talks to a public API with no secrets to protect. Use React Query (or any fetching library) directly:
 
 ```typescript
-// Server-side (Next.js Server Action or TanStack Start server function)
-const sdk = /* framework-specific server accessor */;
-const { data } = await sdk.cart.getUserCart();
+// Public reads — no session needed
+const sdk = storefront.publicStorefront();
+const { data } = await sdk.catalog.listProducts({ limit: 20 });
+
+// Session-bound reads (cart, wishlist, account) — use client accessor
+const sessionSdk = storefront.clientStorefront();
+const { data: wishlist } = await sessionSdk.cart.getWishlist();
 ```
 
-You should not manually fetch `user_id` for ordinary cart/order/customer flows. The session-aware overloads resolve that automatically, and the middleware handles token bootstrap/refresh when the app already uses the documented eager bootstrap pattern.
+The session-aware overloads resolve `user_id` automatically — no manual ID passing needed.
 
 ## Framework-Specific Setup
 

@@ -91,22 +91,24 @@ VITE_API_KEY=your-api-key
 
 ## Accessor Rules
 
+**Pre-render catalog pages** for SEO and fast initial loads using route loaders with `publicStorefront()`. Once the app is hydrated, **client-side fetching is equally fast and much less complex** — use it for all subsequent navigation and interactions. Server functions are optional; the SDK talks to a public API with no secrets to protect.
+
 | Context | What to Use | Import From |
 |---------|-------------|-------------|
-| Route loaders | `storefront.publicStorefront()` | `lib/storefront` |
-| Pre-rendering / head metadata | `storefront.publicStorefront()` | `lib/storefront` |
-| Client-side components | `storefront.clientStorefront()` | `lib/storefront` |
+| Client-side public reads (catalog, categories) | `storefront.publicStorefront()` | `lib/storefront` |
+| Client-side session flows (cart, wishlist, account) | `storefront.clientStorefront()` | `lib/storefront` |
 | Client bootstrap | `storefront.bootstrap()` | `lib/storefront` |
-| Public server functions | `storefront.publicStorefront()` | `lib/storefront` |
-| Session-bound server functions | `serverStorefront()` | `lib/storefront.server` |
+| Route loaders / pre-rendering (optional) | `storefront.publicStorefront()` | `lib/storefront` |
+| Server functions — public reads (optional) | `storefront.publicStorefront()` | `lib/storefront` |
+| Server functions — session-bound (optional) | `serverStorefront()` | `lib/storefront.server` |
 
 **Key distinction from Next.js**: TanStack Start's app-local `serverStorefront()` is **synchronous** (returns `SessionStorefrontSDK` directly), while Next.js's is async (`Promise<SessionStorefrontSDK>`). The server cookie adapter is wired internally via TanStack Start's `getCookie`/`setCookie`/`deleteCookie`.
 
 ## Key Patterns
 
-### Route Loader (Public Reads)
+### Route Loaders (Pre-rendering & SEO)
 
-Route loaders fetch data on the server before rendering. Use `publicStorefront()` for catalog reads:
+Use route loaders with `publicStorefront()` to pre-render catalog pages for SEO and fast initial loads:
 
 ```typescript
 // routes/index.tsx
@@ -135,9 +137,48 @@ function HomePage() {
 }
 ```
 
-### Server Functions (Public Reads)
+### Client-Side Fetching (After Hydration)
 
-For data fetching called from client hooks (e.g., React Query), wrap SDK calls in server functions:
+Once the app is hydrated, client-side fetching is equally fast and much less complex. Use React Query (or any fetching library) with the SDK directly — no server functions needed:
+
+```typescript
+// lib/hooks.ts
+import { useQuery } from "@tanstack/react-query";
+import { storefront } from "@/lib/storefront";
+
+export function useProducts(options: { page?: number; limit?: number } = {}) {
+  return useQuery({
+    queryKey: ["products", options],
+    queryFn: async () => {
+      const sdk = storefront.publicStorefront();
+      const { data, error } = await sdk.catalog.listProducts({
+        page: options.page ?? 1,
+        limit: options.limit ?? 20,
+      });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+  });
+}
+
+export function useWishlist() {
+  return useQuery({
+    queryKey: ["wishlist"],
+    queryFn: async () => {
+      const sdk = storefront.clientStorefront();
+      const { data, error } = await sdk.cart.getWishlist();
+      if (error) throw new Error(error.message);
+      return data ?? { products: [] };
+    },
+  });
+}
+```
+
+Use `publicStorefront()` for catalog reads (no session needed). Use `clientStorefront()` for session-bound operations (cart, wishlist, account). The session-aware overloads resolve `user_id` automatically.
+
+### Server Functions (Optional)
+
+Server functions are not required for most storefront reads. Use them if you want to run logic at the edge or need specific server-side behavior. Keep them thin:
 
 ```typescript
 // lib/server-fns/catalog.ts
@@ -176,9 +217,9 @@ export const fetchCategories = createServerFn({ method: "GET" })
   });
 ```
 
-### Server Functions (Session-Bound Mutations)
+### Server Functions — Session-Bound (Optional)
 
-For operations that need user context (wishlist, cart via server), use the server storefront:
+For session-bound operations that you want to run server-side (e.g., server-side wishlist mutations), use `serverStorefront()`:
 
 ```typescript
 // lib/server-fns/wishlist.ts
@@ -206,37 +247,6 @@ export const addToWishlist = createServerFn({ method: "POST" })
 ```
 
 Do not manually call `sdk.getUserId()` or pass `user_id` for ordinary wishlist/cart methods. The session-aware overloads resolve it automatically.
-
-### Client-Side Hooks with Server Functions
-
-Use React Query to call server functions from client components:
-
-```typescript
-// lib/hooks.ts
-import { useQuery } from "@tanstack/react-query";
-import { fetchProducts, fetchListSkus } from "@/lib/server-fns/catalog";
-
-export function useProducts(options: { page?: number; limit?: number } = {}) {
-  return useQuery({
-    queryKey: ["products", options],
-    queryFn: () => fetchProducts({ data: options }),
-  });
-}
-
-export function useListSkus(options: { categoryId?: string; page?: number; limit?: number } = {}) {
-  return useQuery({
-    queryKey: ["listSkus", options],
-    queryFn: () => fetchListSkus({
-      data: {
-        category_id: options.categoryId ? [options.categoryId] : undefined,
-        page: options.page ?? 1,
-        limit: options.limit ?? 20,
-      },
-    }),
-    enabled: true,
-  });
-}
-```
 
 ### Head Metadata / SEO
 
