@@ -19,7 +19,7 @@ metadata:
 | Task | SDK Method |
 |------|-----------|
 | List products | `sdk.catalog.listProducts({ page, limit, category_id })` |
-| Get product detail | `sdk.catalog.getProductDetail({ product_id_or_slug })` |
+| Get product detail | `sdk.catalog.getProductDetail({ product_id })` |
 | List variants | `sdk.catalog.listProductVariants({ product_id })` |
 | Get variant detail | `sdk.catalog.getVariantDetail({ product_id, variant_id })` |
 | List SKUs (flat) | `sdk.catalog.listSkus()` |
@@ -65,7 +65,7 @@ User Request
     │       → Returns Product[] (with nested variants)
     │
     ├─ "Product detail page"
-    │   ├─ sdk.catalog.getProductDetail({ product_id_or_slug })
+    │   ├─ sdk.catalog.getProductDetail({ product_id })
     │   └─ If has_variant → sdk.catalog.listProductVariants({ product_id })
     │
     ├─ "Search" / "Filter" / "Sort"
@@ -102,6 +102,7 @@ const { data, error } = await sdk.catalog.searchProducts({
 });
 
 // data.skus → Item[] (flat list — each variant is its own record)
+//   Each Item includes product_slug and variant_slug for building SEO-friendly URLs
 // data.facet_distribution → { [attribute]: { [value]: count } }
 // data.facet_stats → { [attribute]: { min, max } } (e.g. price range)
 // data.pagination → { page, limit, total, total_pages }
@@ -131,13 +132,14 @@ const { data, error } = await sdk.catalog.listProducts({
 ```typescript
 const { data, error } = await sdk.catalog.listSkus();
 // Returns Item[] — same flat type as searchProducts
+// Each Item includes product_slug and variant_slug for building SEO-friendly URLs
 ```
 
 ### Product Detail Page (PDP)
 
 ```typescript
 const { data, error } = await sdk.catalog.getProductDetail({
-  product_id_or_slug: "blue-running-shoes",
+  product_id: "blue-running-shoes", // Accepts product ID or slug
 });
 
 const product = data?.product;
@@ -150,6 +152,36 @@ if (product?.has_variant && (!product.variants || product.variants.length === 0)
   });
   // variantData.variants contains all options with pricing and stock
 }
+```
+
+### Adding a Product to Cart from PDP
+
+After resolving the variant on the PDP, use `product.id` and `variant.id` from the `getProductDetail` response:
+
+```typescript
+// product = data.product from getProductDetail()
+// resolvedVariant = the variant matched from product.variants via option selection
+
+if (product.has_variant) {
+  // Variant product — must specify both product_id and variant_id
+  await sdk.cart.addDeleteCartItem(
+    { id: cartId },
+    { product_id: product.id, variant_id: resolvedVariant.id, quantity: 1 }
+  );
+} else {
+  // Simple product — variant_id is null
+  await sdk.cart.addDeleteCartItem(
+    { id: cartId },
+    { product_id: product.id, variant_id: null, quantity: 1 }
+  );
+}
+```
+
+With Hosted Checkout, use `addToCart` instead:
+
+```typescript
+const { addToCart } = useCheckout();
+addToCart(product.id, product.has_variant ? resolvedVariant.id : null, 1);
 ```
 
 ### Canonical Variant URL State (PDP)
@@ -179,7 +211,7 @@ import type {
   Product,
   Variant,
   VariantOption,
-} from "@commercengine/storefront-sdk";
+} from "@commercengine/storefront";
 ```
 
 Do not derive these app-level types from OpenAPI schemas.
@@ -232,11 +264,11 @@ Commerce Engine supports wishlists (add, remove, fetch) via SDK methods. These s
 | CRITICAL | Confusing `Product` vs `Item` types | `listProducts()` returns `Product[]` (grouped, with variants array). `listSkus()` and `searchProducts()` return `Item[]` (flat — each variant is its own record). |
 | CRITICAL | Using `variant` as PDP URL source of truth for multi-option products | Keep option params (`size`, `color`, etc.) canonical; treat `variant` as derived/backfill-only. |
 | HIGH | Resolving variants from a single option or `variant_options` only | Match against `variant.associated_options` across **all** option keys. |
-| HIGH | Deriving option/variant types from generated schemas in app code | Import SDK types directly from `@commercengine/storefront-sdk` (`AssociatedOption`, `VariantOption`, `Variant`, `Product`). |
+| HIGH | Deriving option/variant types from generated schemas in app code | Import SDK types directly from `@commercengine/storefront` (`AssociatedOption`, `VariantOption`, `Variant`, `Product`). |
 | MEDIUM | Treating `attributes` and `variant_options` as unrelated PDP UIs | Build a unified option-display model so shared keys (e.g. `metal`) can render consistently across variant and non-variant products. |
 | HIGH | Ignoring `has_variant` flag | Always check `has_variant` before trying to access variant data |
 | HIGH | Adding product to cart instead of variant | When `has_variant: true`, must add the specific variant, not the product |
-| MEDIUM | Not using `slug` for URLs | Use `slug` field for SEO-friendly URLs, `product_id_or_slug` accepts both |
+| MEDIUM | Not using `slug` for URLs | Use `slug` field for SEO-friendly URLs — `product_id` params across catalog endpoints accept both IDs and slugs |
 | MEDIUM | Missing pagination | All list endpoints return `pagination` — use `page` and `limit` params |
 | LOW | Re-fetching categories | Categories rarely change — cache them client-side |
 
@@ -245,7 +277,7 @@ Commerce Engine supports wishlists (add, remove, fetch) via SDK methods. These s
 - `setup/` - SDK initialization required first
 - `cart-checkout/` - Adding products to cart
 - `orders/` - Products in order context
-- `nextjs-patterns/` - SSG for product pages with `generateStaticParams()`
+- `ssr-patterns/` - SSG / pre-rendering for product pages (Next.js `generateStaticParams()`, TanStack Start pre-rendering)
 
 ## Documentation
 

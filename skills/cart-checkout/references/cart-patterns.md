@@ -75,7 +75,7 @@ function onCartUpdated(cart: Cart) {
 }
 
 // On app initialization — recover existing cart
-async function initializeCart(userId?: string) {
+async function initializeCart() {
   // 1. Try recovering from persisted cart ID
   const savedCartId = getPersistedCartId();
   if (savedCartId) {
@@ -88,12 +88,10 @@ async function initializeCart(userId?: string) {
   }
 
   // 2. Fall back to user's active cart (if logged in)
-  if (userId) {
-    const { data, error } = await sdk.cart.getUserCart({ user_id: userId });
-    if (!error && data?.cart) {
-      updateCartState(data.cart);
-      persistCartId(data.cart.id);
-    }
+  const { data, error } = await sdk.cart.getUserCart();
+  if (!error && data?.cart) {
+    updateCartState(data.cart);
+    persistCartId(data.cart.id);
   }
 }
 
@@ -109,7 +107,7 @@ function isExpired(cart: Cart): boolean {
 
 Commerce Engine does not support creating an empty cart. The cart is created with the first item. How you handle "no cart yet" depends on whether you pre-fetch cart or fetch on demand.
 
-**Pre-fetching cart contents (e.g. for a persistent cart badge or drawer):** Call `sdk.cart.getUserCart({ user_id })` (when logged in) or use a persisted `cart_id` with `sdk.cart.getCart({ id })`. Use the **404 error code** to decide that no cart exists — then show an empty state and create the cart on first add (via `createCart({ items: [...] })`). Treat other error codes (e.g. expired cart) by clearing persisted ID and showing empty state until the next add.
+**Pre-fetching cart contents (e.g. for a persistent cart badge or drawer):** Call `sdk.cart.getUserCart()` or use a persisted `cart_id` with `sdk.cart.getCart({ id })`. Use the **404 error code** to decide that no cart exists — then show an empty state and create the cart on first add (via `createCart({ items: [...] })`). Treat other error codes (e.g. expired cart) by clearing persisted ID and showing empty state until the next add.
 
 **Custom cart, fetch at open time:** When the user opens the cart or checkout, fetch once (e.g. `getUserCart` or `getCart` with persisted ID). Use **error codes** to decide: no cart / 404 → show empty state; success → show contents; expired or invalid → clear storage and show empty state. Create the cart only when the user adds the first item.
 

@@ -8,7 +8,7 @@
   },
   "metadata": {
     "version": "1.0.0",
-    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, and Next.js patterns"
+    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, and SSR/meta-framework patterns (Next.js, TanStack Start)"
   },
   "plugins": [
     {
@@ -117,19 +117,34 @@
       "keywords": ["webhooks", "events", "sync", "notifications"]
     },
     {
-      "name": "ce-nextjs-patterns",
-      "description": "Advanced Next.js patterns for Commerce Engine - storefront() function, SSR, Server Actions, SSG, and cookie-based token management",
+      "name": "ce-ssr-patterns",
+      "description": "SSR/meta-framework patterns for Commerce Engine - Next.js and TanStack Start with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions/actions, pre-rendering, and token management",
       "version": "1.0.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
       },
-      "source": "./skills/nextjs-patterns",
-      "homepage": "https://www.commercengine.io/docs/sdk/nextjs-integration",
+      "source": "./skills/ssr-patterns",
+      "homepage": "https://www.commercengine.io/docs/sdk",
       "repository": "https://github.com/commercengine/skills",
       "license": "MIT",
       "category": "ecommerce",
-      "keywords": ["nextjs", "ssr", "server-actions", "cookies", "storefront"]
+      "keywords": ["nextjs", "tanstack-start", "ssr", "server-actions", "server-functions", "cookies", "storefront", "pre-rendering"]
+    },
+    {
+      "name": "ce-ssr",
+      "description": "Build custom SSR bindings with @commercengine/ssr-utils for SvelteKit, Nuxt, Astro. CookieAdapter, ServerTokenStorage, and public vs session patterns.",
+      "version": "2.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/ssr",
+      "homepage": "https://www.commercengine.io/docs/sdk/token-management",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["ssr", "ssg", "cookies", "token-storage", "ssr-utils", "sveltekit", "nuxt", "astro"]
     }
   ]
 }

@@ -26,8 +26,8 @@ skill({ name: 'ce' })
 ### Step 3: Identify task type from user request
 
 Analyze $ARGUMENTS to determine:
-- **Task type**: setup, auth, catalog, cart/checkout, orders, webhooks, Next.js patterns
-- **Platform**: Next.js, React, Vue, Svelte, Solid, Node.js, Vanilla JS
+- **Task type**: setup, auth, catalog, cart/checkout, orders, webhooks, SSR/meta-framework patterns, custom SSR bindings
+- **Platform**: Next.js, TanStack Start, React, Vue, Svelte, Solid, Node.js, Vanilla JS
 
 Use decision trees in SKILL.md to select correct skill.
 
@@ -43,7 +43,8 @@ Based on task type, load the appropriate skill:
 | Cart / checkout | `cart-checkout/` | SKILL.md + relevant reference |
 | Orders / returns | `orders/` | SKILL.md |
 | Webhooks | `webhooks/` | SKILL.md |
-| Next.js patterns | `nextjs-patterns/` | SKILL.md + relevant reference |
+| Next.js / TanStack Start | `ssr-patterns/` | SKILL.md + relevant reference |
+| Custom SSR bindings | `ssr/` | SKILL.md |
 
 ### Step 5: Look up exact method signatures when needed
 

@@ -19,7 +19,7 @@ import type {
   ProductAttribute,
   Variant,
   VariantOption,
-} from "@commercengine/storefront-sdk";
+} from "@commercengine/storefront";
 
 type SupportedOptionType = "color" | "single-select";
 type AssociatedOptionValue = AssociatedOption[string];

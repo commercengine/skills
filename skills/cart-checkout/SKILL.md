@@ -12,7 +12,7 @@ metadata:
 
 # Cart, Checkout & Payments
 
-> **Prerequisite**: SDK initialized and anonymous auth completed. See `setup/`.
+> **Prerequisite**: SDK initialized. Public catalog reads can use `public()`, but cart and checkout flows must use the session client. See `setup/`.
 
 ## Decision Tree
 
@@ -39,7 +39,7 @@ User Request: "Add cart" / "Checkout" / "Payments"
     │
     ├─ "View cart"
     │   ├─ Hosted → useCheckout().openCart()
-    │   └─ Custom → sdk.cart.getCart({ id }) or getUserCart({ user_id })
+    │   └─ Custom → sdk.cart.getCart({ id }) or sdk.cart.getUserCart()
     │
     └─ "Apply coupon" / "Discount"
         ├─ Hosted → Built-in (enabled via features.coupons)
@@ -65,40 +65,43 @@ See `references/hosted-checkout.md` for the complete reference.
 ### Quick Start
 
 ```bash
-npm install @commercengine/checkout @commercengine/storefront-sdk
+npm install @commercengine/checkout @commercengine/storefront
 ```
 
 ```typescript
-// Recommended default for new storefront apps:
-// Storefront SDK owns auth; Hosted Checkout runs in provided mode.
-import StorefrontSDK, { BrowserTokenStorage } from "@commercengine/storefront-sdk";
-import { initCheckout, getCheckout } from "@commercengine/checkout";
+// Recommended default for new storefront apps (SPA):
+// Storefront SDK owns the live session; Hosted Checkout runs in provided mode.
+import {
+  BrowserTokenStorage,
+  createStorefront,
+} from "@commercengine/storefront";
+import { getCheckout, initCheckout } from "@commercengine/checkout";
 
 const tokenStorage = new BrowserTokenStorage("ce_");
 
-const storefront = new StorefrontSDK({
-  storeId: process.env.NEXT_PUBLIC_STORE_ID!,
-  apiKey: process.env.NEXT_PUBLIC_API_KEY!,
-  tokenStorage,
-  onTokensUpdated: (accessToken, refreshToken) => {
-    // SDK -> checkout
-    getCheckout().updateTokens(accessToken, refreshToken);
+const storefront = createStorefront({
+  storeId: import.meta.env.VITE_STORE_ID,
+  apiKey: import.meta.env.VITE_API_KEY,
+  session: {
+    tokenStorage,
+    onTokensUpdated: (accessToken, refreshToken) => {
+      getCheckout().updateTokens(accessToken, refreshToken);
+    },
   },
 });
 
-const accessToken = await tokenStorage.getAccessToken();
+const sessionSdk = storefront.session();
+const accessToken = await sessionSdk.ensureAccessToken();
 const refreshToken = await tokenStorage.getRefreshToken();
 
 initCheckout({
-  storeId: process.env.NEXT_PUBLIC_STORE_ID!,
-  apiKey: process.env.NEXT_PUBLIC_API_KEY!,
-  environment: "production",
+  storeId: import.meta.env.VITE_STORE_ID,
+  apiKey: import.meta.env.VITE_API_KEY,
   authMode: "provided",
   accessToken: accessToken ?? undefined,
   refreshToken: refreshToken ?? undefined,
   onTokensUpdated: ({ accessToken, refreshToken }) => {
-    // checkout -> SDK
-    storefront.setTokens(accessToken, refreshToken);
+    sessionSdk.setTokens(accessToken, refreshToken);
   },
 });
 ```
@@ -173,7 +176,7 @@ If the app manages its own CE auth and uses `managed` mode, two separate session
 |------|-----------|
 | Create cart | `sdk.cart.createCart({ items: [...] })` |
 | Get cart | `sdk.cart.getCart({ id: cartId })` |
-| Get cart by user | `sdk.cart.getUserCart({ user_id: userId })` |
+| Get cart by user | `sdk.cart.getUserCart()` |
 | Add/update item | `sdk.cart.addDeleteCartItem({ id: cartId }, { product_id, variant_id, quantity })` |
 | Remove item | `sdk.cart.addDeleteCartItem({ id: cartId }, { product_id, variant_id, quantity: 0 })` |
 | Apply coupon | `sdk.cart.applyCoupon({ id: cartId }, { coupon_code })` |

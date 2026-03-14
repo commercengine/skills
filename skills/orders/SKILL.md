@@ -23,7 +23,7 @@ metadata:
 | Get order detail | `sdk.order.getOrderDetails({ order_number })` |
 | Get shipments | `sdk.order.listOrderShipments({ order_number })` |
 | Get payments | `sdk.order.listOrderPayments({ order_number })` |
-| Payment status | `sdk.order.getPaymentStatus(orderNumber)` — takes a string |
+| Payment status | `sdk.order.getPaymentStatus(orderNumber)` — **takes a plain string, not `{ order_number }`** |
 | Retry payment | `sdk.order.retryOrderPayment({ order_number }, { payment_method })` |
 | Cancel order | `sdk.order.cancelOrder({ order_number }, { cancellation_reason, refund_mode })` |
 | Get refunds | `sdk.order.listOrderRefunds({ order_number })` |

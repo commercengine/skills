@@ -1,52 +1,63 @@
 ---
 name: ce
-description: Commerce Engine router. Use when user asks about building a storefront, setting up the SDK, authentication, products, cart, checkout, orders, webhooks, or Next.js e-commerce patterns. Automatically routes to the specific skill based on their task.
+description: Commerce Engine router. Use when the user asks about building a storefront, setting up the SDK, auth, products, cart, checkout, orders, webhooks, SSR, Next.js, or TanStack Start e-commerce patterns.
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
 
 # Commerce Engine Skills Router
 
-These skills cover **B2C storefronts**. B2B storefronts share ~95% of the same patterns — the main difference is customer group pricing (see `ce-catalog` § "Customer Groups & Pricing" and `ce-setup` § "Default Headers").
+These skills cover B2C storefronts. B2B storefronts use the same SDK patterns plus customer-group-aware pricing and headers.
 
-Based on what you're trying to do, here's the right skill to use:
+## Current SDK Mental Model
+
+All frameworks install `@commercengine/storefront` — a unified package with subpath exports per framework:
+
+- **SPA** (`@commercengine/storefront`): `createStorefront(...)` → `storefront.public()` / `storefront.session()`
+- **Next.js** (`@commercengine/storefront/nextjs`): `createNextjsStorefront(...)` → `storefront.publicStorefront()` / `storefront.clientStorefront()` / `await storefront.serverStorefront()`
+- **TanStack Start** (`@commercengine/storefront/tanstack-start`): `createTanStackStartStorefront(...)` → `storefront.publicStorefront()` / `storefront.clientStorefront()` + server entry for `serverStorefront()`
+
+Core principle: **public reads** use the public accessor (API-key-backed, build-safe). **Live session flows** (auth, cart, orders) use the session/client/server accessor.
+
+> `@commercengine/storefront-sdk-nextjs` is **deprecated**. Use `@commercengine/storefront/nextjs` instead.
 
 ## By Task
 
-**Setting up the SDK** → Use `ce-setup`
+**Setting up the SDK** -> `ce-setup`
 - Framework detection and SDK install
-- Token storage selection
-- Environment variables (`CE_STORE_ID`, `CE_API_KEY`)
+- Session storage selection
+- Environment variables and one-config setup
 
-**Authentication & login** → Use `ce-auth`
-- Anonymous auth (always required)
-- OTP login (email/phone/WhatsApp), password auth, token refresh
-- **Note**: If using Hosted Checkout, login is handled inside the checkout drawer. Only build custom login UI if your app needs logged-in state outside of checkout (account pages, order history, etc.)
+**Authentication & login** -> `ce-auth`
+- Anonymous session bootstrap
+- OTP login, password login, password registration, password reset
+- Account/profile flows
 
-**Products & catalog** → Use `ce-catalog`
-- Products, variants, SKUs
-- Categories, faceted search
-- Reviews, recommendations
+**Products & catalog** -> `ce-catalog`
+- Products, categories, variants, search
+- Reviews and recommendations
 
-**Cart & checkout** → Use `ce-cart-checkout`
-- **Hosted Checkout (recommended)** — pre-built, embeddable, saves 2-3 months
-- Custom checkout (advanced) — Cart CRUD, fulfillment, payment gateways
-- Coupons, loyalty points
+**Cart & checkout** -> `ce-cart-checkout`
+- Hosted Checkout (recommended)
+- Custom checkout (advanced)
+- Cart CRUD, coupons, loyalty points, payments
 
-**Orders & returns** → Use `ce-orders`
-- Create orders from cart
-- Shipment tracking, payment status
-- Cancellation, returns flow
+**Orders & returns** -> `ce-orders`
+- Order creation, order history, shipments, payments
+- Cancellation and returns
 
-**Webhooks & events** → Use `ce-webhooks`
-- 14 event types (order, payment, refund, shipment)
-- Signature verification
-- Async processing patterns
+**Webhooks & events** -> `ce-webhooks`
+- Event handling, signature verification, async processing
 
-**Next.js patterns** → Use `ce-nextjs-patterns`
-- `storefront()` universal function
-- `CookieTokenStorage` for SSR
-- Server Actions, SSG, ISR
+**Next.js / TanStack Start patterns** -> `ce-ssr-patterns`
+- `publicStorefront()` / `clientStorefront()` / `serverStorefront()`
+- Bootstrap, Server Actions/functions, pre-rendering, token management
+- Concrete references for Next.js and TanStack Start
+
+**Custom SSR bindings** -> `ce-ssr`
+- `@commercengine/ssr-utils` for frameworks without a first-party wrapper (SvelteKit, Nuxt, Astro)
+- `ServerTokenStorage` and `CookieAdapter`
+- Public build reads vs live request sessions
 
 ## Storefront Pages
 
@@ -54,62 +65,49 @@ Canonical pages for a CE storefront and the skills/methods each needs:
 
 | Page | Example Route | Skills | Key SDK Methods |
 |------|---------------|--------|-----------------|
-| Home | `/` | catalog | `listProducts`, `listCategories`, recommendations (`listSimilarProducts`, etc.) |
-| Product Listing (PLP) | `/products`, `/categories/[slug]` | catalog | `searchProducts({ query, filter, sort, facets })` for filtered/search PLPs; `listProducts` for simple grids |
-| Product Detail (PDP) | `/products/[slug]` | catalog | `getProductDetail`, `listProductVariants` (if `has_variant`), `listProductReviews` |
-| Cart | Hosted Checkout drawer | cart-checkout | `useCheckout().openCart()`, `useCheckout().addToCart()` |
-| Checkout | Hosted Checkout drawer | cart-checkout | `useCheckout().openCheckout()` |
-| Login | `/login` | auth | `loginWithEmail` / `loginWithPhone`, `verifyOtp` |
+| Home | `/` | catalog | `listProducts`, `listCategories`, recommendations |
+| Product Listing | `/products`, `/categories/[slug]` | catalog | `searchProducts`, `listProducts` |
+| Product Detail | `/products/[slug]` | catalog | `getProductDetail`, `listProductVariants`, `listProductReviews` |
+| Cart | Hosted Checkout drawer or `/cart` | cart-checkout | `useCheckout().openCart()` or `sdk.cart.*` |
+| Checkout | Hosted Checkout drawer or `/checkout` | cart-checkout | `useCheckout().openCheckout()` or custom checkout flow |
+| Login | `/login` | auth | `loginWithEmail`, `loginWithPhone`, `verifyOtp`, `loginWithPassword` |
 | Account | `/account` | auth | `getUserDetails`, `updateUserDetails`, `changePassword` |
 | Orders | `/account/orders` | orders | `listOrders` |
 | Order Detail | `/account/orders/[id]` | orders | `getOrderDetails`, `listOrderShipments`, `listOrderPayments` |
 
-> **Cart & Checkout routes**: With Hosted Checkout (recommended), cart and checkout are drawers — no dedicated pages needed. With custom checkout, add `/cart` and `/checkout` as separate pages (see `ce-cart-checkout`).
-
-> **Building a new storefront?** Start with `ce-setup`, then build pages in this order: Home → PLP → PDP → Cart/Checkout → Login → Account → Orders.
->
-> **Converting an existing project?** Follow the migration checklist below.
-
 ## Converting an Existing Project
 
-Step-by-step for replacing an existing backend (or mock data) with Commerce Engine:
+1. **Install SDK** - Follow `ce-setup`. Install `@commercengine/storefront`.
+2. **Replace public catalog reads first** - Move listing/detail/category pages to `publicStorefront()` / `public()`.
+3. **Add session-aware flows** - Auth, cart, checkout, account, orders should use `clientStorefront()` / `serverStorefront()` / `session()`.
+4. **Adopt Hosted Checkout or custom checkout** - Follow `ce-cart-checkout`.
+5. **Add framework-specific SSR behavior if needed** - `ce-ssr-patterns` (Next.js / TanStack Start) or `ce-ssr` (custom bindings).
 
-1. **Install SDK** — Follow `ce-setup`. Detect framework, install packages, set env vars, choose token storage.
-2. **Add anonymous auth** — Call `sdk.auth.getAnonymousToken()` at app startup. Every visitor needs this before any API call works.
-3. **Replace catalog data** — Swap mock/existing product data with `sdk.catalog.*` calls. Start here because catalog is read-only and low-risk.
-   - Product lists → `searchProducts` or `listProducts`
-   - Product detail → `getProductDetail` + `listProductVariants`
-   - Categories → `listCategories`
-4. **Add auth** — Replace existing login with CE auth (`ce-auth`). Use `loginWithEmail`/`loginWithPhone` + `verifyOtp`.
-5. **Add cart + checkout** — Install Hosted Checkout (`ce-cart-checkout`). Replace existing cart UI with `useCheckout()` hooks. Wire `authMode: "provided"` with two-way token sync.
-6. **Add orders** — Replace order history with `listOrders` / `getOrderDetails` (`ce-orders`).
-7. **Add SEO metadata** — Map CE product fields to meta tags (`ce-nextjs-patterns` § "SEO Metadata" for Next.js).
-
-> **Key principle**: Replace one data source at a time. Keep existing UI components — only swap the data layer underneath.
+> Replace one data source at a time. Keep existing UI components where possible and swap the data layer first.
 
 ## Decision Tree
 
 ```
 User Request
     │
-    ├─ "Set up SDK" / "Add Commerce Engine"  → ce-setup
-    ├─ "Login" / "Auth" / "OTP"              → ce-auth
-    ├─ "Products" / "Categories" / "Search"  → ce-catalog
-    ├─ "Cart" / "Checkout" / "Payments"      → ce-cart-checkout
-    ├─ "Orders" / "Returns" / "Shipments"    → ce-orders
-    ├─ "Webhooks" / "Events" / "Sync"        → ce-webhooks
-    └─ "Next.js" / "SSR" / "Server Actions"  → ce-nextjs-patterns
+    ├─ "Set up SDK" / "Add Commerce Engine"          → ce-setup
+    ├─ "Login" / "Auth" / "OTP"                      → ce-auth
+    ├─ "Products" / "Categories" / "Search"          → ce-catalog
+    ├─ "Cart" / "Checkout" / "Payments"              → ce-cart-checkout
+    ├─ "Orders" / "Returns" / "Shipments"            → ce-orders
+    ├─ "Webhooks" / "Events" / "Sync"                → ce-webhooks
+    ├─ "Next.js" / "Server Actions"                  → ce-ssr-patterns (references/nextjs.md)
+    ├─ "TanStack Start" / "Server functions"         → ce-ssr-patterns (references/tanstack-start.md)
+    └─ "SSR" / "Cookies" / "Custom binding"          → ce-ssr
 ```
 
 ## Quick Navigation
 
-If you know your task, you can directly access:
-- `/ce-setup` - SDK setup & framework detection
-- `/ce-auth` - Authentication & user management
-- `/ce-catalog` - Products & categories
-- `/ce-cart-checkout` - Cart, checkout & payments
-- `/ce-orders` - Order management
-- `/ce-webhooks` - Webhook events & syncing
-- `/ce-nextjs-patterns` - Next.js patterns
-
-Or describe what you need and I'll recommend the right one.
+- `/ce-setup`
+- `/ce-auth`
+- `/ce-catalog`
+- `/ce-cart-checkout`
+- `/ce-orders`
+- `/ce-webhooks`
+- `/ce-ssr-patterns`
+- `/ce-ssr`

@@ -65,7 +65,8 @@ git clone https://github.com/commercengine/skills ~/.claude/skills/commercengine
 | `ce-cart-checkout` | Cart, checkout & payments | Cart CRUD, checkout flow, hosted checkout | Cart & Checkout |
 | `ce-orders` | Order management & returns | Order history, tracking, returns | Orders |
 | `ce-webhooks` | Webhook events & syncing | Real-time events, notifications | Webhooks |
-| `ce-nextjs-patterns` | Advanced Next.js patterns | SSR, Server Actions, SSG | Framework Patterns |
+| `ce-ssr-patterns` | Next.js & TanStack Start patterns | SSR, Server Actions/functions, pre-rendering | Framework Patterns |
+| `ce-ssr` | Custom SSR bindings | SvelteKit, Nuxt, Astro with ssr-utils | Custom SSR |
 
 ## Quick Start
 
@@ -80,7 +81,11 @@ Get your Store ID and API Key from the [Commerce Engine Dashboard](https://app.c
 NEXT_PUBLIC_STORE_ID=your-store-id
 NEXT_PUBLIC_API_KEY=your-api-key
 
-# For other frameworks
+# For TanStack Start / Vite-based frameworks
+VITE_STORE_ID=your-store-id
+VITE_API_KEY=your-api-key
+
+# For Node.js / Express
 CE_STORE_ID=your-store-id
 CE_API_KEY=your-api-key
 ```
@@ -95,7 +100,8 @@ CE_API_KEY=your-api-key
 | "Add cart and checkout" | `ce-cart-checkout` |
 | "Show order history with tracking" | `ce-orders` |
 | "Set up webhooks for order events" | `ce-webhooks` |
-| "Use Server Actions for cart mutations" | `ce-nextjs-patterns` |
+| "Use Server Actions for cart mutations" | `ce-ssr-patterns` |
+| "Set up TanStack Start with server functions" | `ce-ssr-patterns` |
 
 ## Repository Structure
 
@@ -111,7 +117,8 @@ commerce-engine-skills/
 │   ├── auth/                    # Authentication
 │   │   └── SKILL.md
 │   ├── catalog/                 # Products & categories
-│   │   └── SKILL.md
+│   │   ├── SKILL.md
+│   │   └── references/
 │   ├── cart-checkout/           # Cart & checkout
 │   │   ├── SKILL.md
 │   │   └── references/
@@ -119,9 +126,11 @@ commerce-engine-skills/
 │   │   └── SKILL.md
 │   ├── webhooks/                # Webhook events
 │   │   └── SKILL.md
-│   └── nextjs-patterns/         # Next.js patterns
-│       ├── SKILL.md
-│       └── references/
+│   ├── ssr-patterns/            # Next.js & TanStack Start
+│   │   ├── SKILL.md
+│   │   └── references/
+│   └── ssr/                     # Custom SSR bindings
+│       └── SKILL.md
 └── README.md
 ```
 

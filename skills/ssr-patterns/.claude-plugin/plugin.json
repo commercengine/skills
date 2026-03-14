@@ -1,0 +1,14 @@
+{
+  "name": "ce-ssr-patterns",
+  "description": "SSR/meta-framework patterns for Commerce Engine storefronts using @commercengine/storefront. Covers Next.js and TanStack Start with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions, pre-rendering, and cookie-based token management.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/sdk",
+  "repository": "https://github.com/commercengine/skills",
+  "keywords": ["nextjs", "tanstack-start", "ssr", "server-actions", "server-functions", "cookies", "storefront", "pre-rendering"],
+  "category": "ecommerce"
+}

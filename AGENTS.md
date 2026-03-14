@@ -18,7 +18,8 @@ skills/
 │   ├── cart-checkout/        # Cart, checkout & payments
 │   ├── orders/               # Order management & returns
 │   ├── webhooks/             # Webhook events & syncing
-│   └── nextjs-patterns/      # Advanced Next.js patterns
+│   ├── ssr-patterns/         # Next.js & TanStack Start SSR patterns
+│   └── ssr/                  # Custom SSR bindings (SvelteKit, Nuxt, Astro)
 └── README.md                 # User-facing documentation
 ```
 
@@ -34,8 +35,9 @@ User Request
     ├─ "Products" / "Categories" / "Search"  → catalog/
     ├─ "Cart" / "Checkout" / "Payments"      → cart-checkout/
     ├─ "Orders" / "Returns" / "Shipments"    → orders/
-    ├─ "Webhooks" / "Events" / "Sync"        → webhooks/
-    └─ "Next.js" / "SSR" / "Server Actions"  → nextjs-patterns/
+    ├─ "Webhooks" / "Events" / "Sync"                → webhooks/
+    ├─ "Next.js" / "TanStack Start" / "Server Actions" → ssr-patterns/
+    └─ "SSR" / "Cookies" / "Custom binding"            → ssr/
 ```
 
 ### Skill Structure
@@ -117,15 +119,15 @@ if (error) {
 
 ```typescript
 // SPA (React, Vue, Svelte, Solid)
-import { BrowserTokenStorage } from "@commercengine/storefront-sdk";
+import { BrowserTokenStorage } from "@commercengine/storefront";
 tokenStorage: new BrowserTokenStorage("myapp_")
 
-// SSR (Next.js)
-import { CookieTokenStorage } from "@commercengine/storefront-sdk";
-tokenStorage: new CookieTokenStorage({ prefix: "myapp_" })
+// SSR (Next.js, TanStack Start) — handled automatically by the wrapper
+// Use createNextjsStorefront() or createTanStackStartStorefront()
+// with tokenStorageOptions: { prefix: "myapp_" }
 
 // Server-side (Node.js, Express)
-import { MemoryTokenStorage } from "@commercengine/storefront-sdk";
+import { MemoryTokenStorage } from "@commercengine/storefront";
 tokenStorage: new MemoryTokenStorage()
 ```
 
@@ -142,6 +144,7 @@ Product (has_variant: true)
 
 Check for these files to detect the framework:
 - `next.config.js` or `next.config.mjs` → Next.js
+- `@tanstack/react-start` in package.json → TanStack Start
 - `vite.config.ts` with `@vitejs/plugin-react` → React SPA
 - `vite.config.ts` with `@vitejs/plugin-vue` → Vue SPA
 - `svelte.config.js` → Svelte/SvelteKit
@@ -150,11 +153,12 @@ Check for these files to detect the framework:
 
 ### Common Pitfalls (All Skills)
 
-1. **Missing anonymous auth** - Must call `sdk.auth.getAnonymousToken()` before any API call
-2. **Wrong token storage** - Use `CookieTokenStorage` for SSR, `BrowserTokenStorage` for SPA
+1. **Missing session bootstrap** - Use `sdk.ensureAccessToken()` (SPA) or `storefront.bootstrap()` (SSR) before session flows
+2. **Wrong token storage** - SSR frameworks with first-party wrappers handle this automatically; use `BrowserTokenStorage` for SPA only
 3. **Product vs Variant vs SKU confusion** - Always check `has_variant` before accessing variant data
-4. **Env var naming** - `CE_STORE_ID` and `CE_API_KEY` (or `NEXT_PUBLIC_*` for Next.js) must be set
+4. **Env var naming** - `VITE_STORE_ID` / `NEXT_PUBLIC_STORE_ID` and corresponding API key must be set
 5. **Cart expiration** - Carts have `expires_at`, handle gracefully
+6. **Deprecated package** - `@commercengine/storefront-sdk-nextjs` is deprecated; use `@commercengine/storefront/nextjs`
 
 ## Quality Checklist
 

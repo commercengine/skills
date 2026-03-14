@@ -84,7 +84,7 @@ Use **Checkout Studio** for checkout customization:
 | `onClose` | — | Checkout overlay was closed. |
 | `onComplete` | `{ id, orderNumber }` | Order was placed successfully. |
 | `onCartUpdate` | `{ count, total, currency }` | Cart contents changed. |
-| `onTokensUpdated` | `{ accessToken, refreshToken }` | Tokens changed (anonymous auth, login, logout, refresh). Use this for token sync. |
+| `onTokensUpdated` | `{ accessToken, refreshToken }` | Tokens changed (anonymous auth, login, logout, refresh). Use this for token sync. **Note:** Checkout's callback receives a single object `({ accessToken, refreshToken })`, while the SDK's `onTokensUpdated` receives two separate arguments `(accessToken, refreshToken)`. Do not mix up the signatures. |
 | `onLogin` | `{ user, loginMethod }` | User logged in (semantic event). `loginMethod` is `"whatsapp"`, `"phone"`, or `"email"`. |
 | `onLogout` | `{ user }` | User logged out (semantic event). |
 | `onSessionError` | — | Session became invalid. All tokens are cleared. |
@@ -195,53 +195,59 @@ function AddToCartButton({ productId, variantId }: Props) {
 
 ### Next.js
 
-Uses the React binding in a `"use client"` provider. Since Next.js storefronts use `storefront-sdk-nextjs` for data fetching, you need `authMode: "provided"` with two-way token sync.
+Uses the React binding in a `"use client"` provider. Since Next.js storefronts use `createNextjsStorefront()`, Hosted Checkout should sync against the client storefront.
 
-**Step 1: Configure `storefront()` with checkout sync**
+**Step 1: Configure the storefront with checkout sync**
 
 ```typescript
 // lib/storefront.ts
-import { createStorefront } from "@commercengine/storefront-sdk-nextjs";
-import { getCheckout } from "@commercengine/checkout/react";
+import { Environment } from "@commercengine/storefront";
+import { createNextjsStorefront } from "@commercengine/storefront/nextjs";
 
-export const storefront = createStorefront({
+export const storefront = createNextjsStorefront({
+  storeId: process.env.NEXT_PUBLIC_STORE_ID!,
+  apiKey: process.env.NEXT_PUBLIC_API_KEY!,
+  environment: Environment.Staging,
+  tokenStorageOptions: { prefix: "myapp_" },
   onTokensUpdated: (accessToken, refreshToken) => {
-    // SDK → checkout: sync on every token change (login, refresh, anonymous)
-    try {
-      getCheckout().updateTokens(accessToken, refreshToken);
-    } catch {
-      // Checkout not initialized yet — will receive tokens on init
+    if (typeof window !== "undefined") {
+      void import("@commercengine/checkout").then(({ getCheckout }) => {
+        getCheckout().updateTokens(accessToken, refreshToken);
+      });
     }
   },
 });
 ```
 
-> **Note**: `createStorefront()` returns the same `storefront()` function — all existing usage (`storefront(cookies())`, `storefront()`, `storefront({ isRootLayout: true })`) continues to work.
+**Step 2: Bootstrap + init checkout in a root client component**
 
-**Step 2: Create CheckoutProvider**
+No provider wrapper needed — `initCheckout` is called once at the root and `useCheckout()` works globally.
 
 ```tsx
-// providers/checkout-provider.tsx
+// components/storefront-bootstrap.tsx
 "use client";
 
 import { useEffect } from "react";
-import { storefront } from "@/lib/storefront";
 import { initCheckout, destroyCheckout } from "@commercengine/checkout/react";
+import { storefront } from "@/lib/storefront";
 
-export function CheckoutProvider({ children }: { children: React.ReactNode }) {
+export function StorefrontBootstrap() {
   useEffect(() => {
     async function init() {
-      const sdk = storefront();
+      await storefront.bootstrap();
+
+      const sdk = storefront.clientStorefront();
       const accessToken = await sdk.getAccessToken();
+      const refreshToken = await sdk.session.peekRefreshToken();
 
       initCheckout({
         storeId: process.env.NEXT_PUBLIC_STORE_ID!,
         apiKey: process.env.NEXT_PUBLIC_API_KEY!,
         authMode: "provided",
         accessToken: accessToken ?? undefined,
+        refreshToken: refreshToken ?? undefined,
         onTokensUpdated: ({ accessToken, refreshToken }) => {
-          // checkout → SDK: sync back
-          sdk.setTokens(accessToken, refreshToken);
+          void sdk.setTokens(accessToken, refreshToken);
         },
       });
     }
@@ -250,26 +256,22 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
     return () => destroyCheckout();
   }, []);
 
-  return <>{children}</>;
+  return null;
 }
 ```
 
-**Step 3: Wire into root layout**
+**Step 3: Mount in root layout**
 
 ```tsx
 // app/layout.tsx
-import { StorefrontSDKInitializer } from "@commercengine/storefront-sdk-nextjs/client";
-import { storefront } from "@/lib/storefront";
-import { CheckoutProvider } from "@/providers/checkout-provider";
-
-const sdk = storefront({ isRootLayout: true });
+import { StorefrontBootstrap } from "@/components/storefront-bootstrap";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <StorefrontSDKInitializer />
-        <CheckoutProvider>{children}</CheckoutProvider>
+        <StorefrontBootstrap />
+        {children}
       </body>
     </html>
   );
@@ -277,12 +279,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 ```
 
 **How the sync works:**
-1. `StorefrontSDKInitializer` bootstraps anonymous tokens on first visit
-2. SDK's `onTokensUpdated` fires → pushes tokens to checkout via `getCheckout().updateTokens()`
-3. If user logs in via checkout, checkout's `onTokensUpdated` fires → pushes back to SDK via `sdk.setTokens()`
-4. For returning visitors, `CheckoutProvider` reads existing `accessToken` and passes it to `initCheckout`
+1. `StorefrontBootstrap` calls `storefront.bootstrap()` to eagerly establish the browser session
+2. The SDK's `onTokensUpdated` pushes every token change to checkout
+3. Checkout's `onTokensUpdated` pushes token changes back into the client storefront
+4. Returning visitors rehydrate from the existing session cookies
 
-Then use `useCheckout()` in any client component.
+Then use `useCheckout()` in any client component — no provider needed.
 
 ### Vue
 
@@ -496,7 +498,7 @@ document.getElementById("add-btn").onclick = () => {
 
 ## Auth Mode Guide
 
-Everything in Commerce Engine is linked to the user. Anonymous auth guarantees a `user_id` before anything happens — cart creation, analytics, order attribution. **There must be exactly one source of truth for the auth session.** Two separate sessions (your app and checkout managing auth independently) will cause disjointed carts, broken server-side analytics, and corrupted order attribution.
+Everything in Commerce Engine is linked to the live session. Anonymous bootstrap guarantees a `user_id` before cart creation, analytics, and order attribution. **There must be exactly one source of truth for the auth session.** Two separate sessions (your app and checkout managing auth independently) cause disjointed carts, broken server-side analytics, and corrupted order attribution.
 
 ### Choosing the Right Mode
 
@@ -552,22 +554,27 @@ initCheckout({
 **Two-way sync pattern (Storefront SDK ↔ Hosted Checkout):**
 
 ```typescript
-import StorefrontSDK, { BrowserTokenStorage } from "@commercengine/storefront-sdk";
-import { initCheckout, getCheckout } from "@commercengine/checkout";
+import {
+  BrowserTokenStorage,
+  createStorefront,
+} from "@commercengine/storefront";
+import { getCheckout, initCheckout } from "@commercengine/checkout";
 
 const tokenStorage = new BrowserTokenStorage("ce_");
 
-const storefront = new StorefrontSDK({
+const storefront = createStorefront({
   storeId: "store_xxx",
   apiKey: "ak_xxx",
-  tokenStorage,
-  onTokensUpdated: (accessToken, refreshToken) => {
-    // SDK -> checkout
-    getCheckout().updateTokens(accessToken, refreshToken);
+  session: {
+    tokenStorage,
+    onTokensUpdated: (accessToken, refreshToken) => {
+      getCheckout().updateTokens(accessToken, refreshToken);
+    },
   },
 });
 
-const accessToken = await tokenStorage.getAccessToken();
+const sessionSdk = storefront.session();
+const accessToken = await sessionSdk.ensureAccessToken();
 const refreshToken = await tokenStorage.getRefreshToken();
 
 initCheckout({
@@ -576,10 +583,8 @@ initCheckout({
   authMode: "provided",
   accessToken: accessToken ?? undefined,
   refreshToken: refreshToken ?? undefined,
-
   onTokensUpdated: ({ accessToken, refreshToken }) => {
-    // checkout -> SDK
-    storefront.setTokens(accessToken, refreshToken);
+    void sessionSdk.setTokens(accessToken, refreshToken);
   },
   onLogin: ({ user, loginMethod }) => {
     updateUserUI(user, loginMethod);
