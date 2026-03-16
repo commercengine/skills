@@ -34,11 +34,11 @@ The `@commercengine/storefront-sdk-nextjs` package is **deprecated**. Use `@comm
 | 4. Set env vars | `VITE_STORE_ID` / `NEXT_PUBLIC_STORE_ID` and `VITE_API_KEY` / `NEXT_PUBLIC_API_KEY` |
 | 5. Bootstrap session | SPA: call `sdk.ensureAccessToken()` once during startup if you want eager session setup, SSR frameworks: `storefront.bootstrap()` in a client component |
 | 6. Use the right accessor | Public reads: `publicStorefront()` / `public()`, Session flows: `clientStorefront()` / `serverStorefront()` / `session()` |
-| 7. Hosted Checkout (if used) | Run checkout in `authMode: "provided"` and sync tokens both ways |
+| 7. Hosted Checkout (if used) | **Required**: `authMode: "provided"` with two-way token sync (any app using the Storefront SDK) |
 
 ## Canonical Setup (Storefront + Hosted Checkout)
 
-If the storefront uses Hosted Checkout, this is the canonical setup:
+If the app uses Hosted Checkout alongside the Storefront SDK, `authMode: "provided"` with two-way token sync is **required** — not optional. The SDK manages its own session for API calls; without `provided` mode, checkout creates a second independent session. This is the canonical setup:
 
 - The Storefront SDK owns session state.
 - Hosted Checkout runs in `authMode: "provided"`.
@@ -81,7 +81,7 @@ initCheckout({
   accessToken: accessToken ?? undefined,
   refreshToken: refreshToken ?? undefined,
   onTokensUpdated: ({ accessToken, refreshToken }) => {
-    sessionSdk.setTokens(accessToken, refreshToken);
+    void sessionSdk.setTokens(accessToken, refreshToken);
   },
 });
 ```

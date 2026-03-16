@@ -196,13 +196,13 @@ This is also the recommended approach for checkout auth — there is no separate
 
 ## Logout
 
-Logout is handled by Hosted Checkout when using `managed` auth mode — the checkout UI includes login/logout. The SDK also exposes `sdk.auth.logout()` for custom logout buttons:
+The SDK exposes `sdk.auth.logout()` for custom logout buttons:
 
 ```typescript
 const { data, error } = await sdk.auth.logout();
 ```
 
-`logout()` does **not** clear tokens — it returns new tokens with reduced privileges. The session continues with full continuity (same cart, same analytics trail), but the user is no longer in a logged-in state. The SDK's `onTokensUpdated` callback fires with the new tokens, so Hosted Checkout (if using `authMode: "provided"`) automatically receives them.
+`logout()` does **not** clear tokens — it returns new tokens with reduced privileges. The session continues with full continuity (same cart, same analytics trail), but the user is no longer in a logged-in state. The SDK's `onTokensUpdated` callback fires with the new tokens, and the two-way sync with Hosted Checkout (when using `authMode: "provided"`) propagates them automatically — no manual token clearing or `updateTokens("", "")` needed.
 
 ## Common Pitfalls
 
