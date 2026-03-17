@@ -1,20 +1,20 @@
 ---
 name: ce-ssr-patterns
-description: SSR/meta-framework patterns for Commerce Engine using @commercengine/storefront. Covers Next.js and TanStack Start with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions/actions, pre-rendering, and cookie-based token management.
+description: SSR/meta-framework patterns for Commerce Engine using @commercengine/storefront. Covers Next.js, TanStack Start, Astro, and SvelteKit with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions/actions, pre-rendering, and cookie-based token management.
 license: MIT
 allowed-tools: Bash
 metadata:
   author: commercengine
-  version: "1.0.0"
+  version: "2.0.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
 
 # SSR / Meta-Framework Patterns
 
-For basic installation, see `setup/`. For building custom bindings with `@commercengine/ssr-utils` (SvelteKit, Nuxt, Astro), see `ssr/`.
+For basic installation, see `setup/`. For the rarer case where you need custom request-bound SSR bindings with `@commercengine/ssr-utils` (Nuxt or other unsupported frameworks), see `ssr/`.
 
-This skill covers frameworks with **first-party Commerce Engine wrappers**: Next.js and TanStack Start. Both ship as subpath exports of `@commercengine/storefront`.
+This skill covers frameworks with **first-party Commerce Engine wrappers**: Next.js, TanStack Start, Astro, and SvelteKit. All ship as subpath exports of `@commercengine/storefront`.
 
 ## Impact Levels
 
@@ -28,40 +28,23 @@ This skill covers frameworks with **first-party Commerce Engine wrappers**: Next
 |-----------|-------------|
 | `references/nextjs.md` | CRITICAL - Next.js setup, accessor rules, Server Actions, SSG |
 | `references/tanstack-start.md` | CRITICAL - TanStack Start setup, server functions, route loaders, pre-rendering |
+| `references/astro.md` | CRITICAL - Astro setup, browser bootstrap, server-only cookie access |
+| `references/sveltekit.md` | CRITICAL - SvelteKit setup, load functions, hooks, form actions |
 | `references/token-management.md` | HIGH - Token flow, bootstrap pattern, cookie configuration |
 
 ## Shared Mental Model
 
-All first-party SSR wrappers follow the same three-accessor pattern:
+All first-party SSR wrappers follow the same three-accessor pattern (Next.js, TanStack Start, Astro, SvelteKit):
 
 | Accessor | Environment | Purpose |
 |----------|-------------|---------|
 | `publicStorefront()` | Server or client | Build-safe public reads (catalog, categories, store config). API-key-backed, no session. |
 | `clientStorefront()` | Client only | Browser-side session client. Throws if called on server. |
-| `serverStorefront()` | Server only | Request-bound session with cookie-backed token storage. Next.js: `await storefront.serverStorefront()`. TanStack Start: `serverStorefront()` from the app-local server-only module. |
+| `serverStorefront()` | Server only | Request-bound session with cookie-backed token storage. Next.js: `await storefront.serverStorefront()`. TanStack Start: `serverStorefront()` from server-only module. Astro: `serverStorefront(Astro.cookies)`. SvelteKit: `serverStorefront(cookies)` in load/hooks/actions. |
 
 ### Bootstrap
 
-SSR apps **must** mount a client component that calls `storefront.bootstrap()` in the root layout. This establishes the anonymous session cookie before later `serverStorefront()` reads depend on it.
-
-```tsx
-// Works identically for Next.js and TanStack Start
-"use client"; // Next.js only — TanStack Start components are universal
-
-import { useEffect } from "react";
-import { storefront } from "@/lib/storefront";
-
-export function StorefrontBootstrap() {
-  useEffect(() => {
-    storefront.bootstrap().catch(console.error);
-  }, []);
-  return null;
-}
-```
-
-Mount this once in the root layout (`app/layout.tsx` for Next.js, `__root.tsx` for TanStack Start). In Next.js, the root layout is a Server Component by default — this is fine. Server Components can render Client Components as children; only the `StorefrontBootstrap` component itself runs on the client. Place it as high in the tree as possible so the session is established before any downstream components need it.
-
-**Why bootstrap matters**: Cold server-component reads without prior client bootstrap cannot reliably persist session cookies. The first session-bound call in a Server Component may create an anonymous token for that request, but session continuity is not guaranteed without the client bootstrap.
+SSR apps **must** call `storefront.bootstrap()` on the client (root layout mount) before later `serverStorefront()` reads depend on cookie continuity. Without it, session continuity is not guaranteed. See each framework's reference for the exact bootstrap pattern.
 
 ### Pre-rendering for SEO & Initial Load
 
@@ -91,65 +74,16 @@ const { data: wishlist } = await sessionSdk.cart.getWishlist();
 
 The session-aware overloads resolve `user_id` automatically — no manual ID passing needed.
 
-## Framework-Specific Setup
+## Framework Quick Reference
 
-### Next.js
+| Framework | Import | Factory | Server Entry | Server Accessor | Env Prefix | Reference |
+|-----------|--------|---------|-------------|-----------------|------------|-----------|
+| Next.js | `.../nextjs` | `createNextjsStorefront()` | Built-in (async) | `await storefront.serverStorefront()` | `NEXT_PUBLIC_` | `references/nextjs.md` |
+| TanStack Start | `.../tanstack-start` | `createTanStackStartStorefront()` | `.../tanstack-start/server` | `serverStorefront()` | `VITE_` | `references/tanstack-start.md` |
+| Astro | `.../astro` | `createAstroStorefront()` | `.../astro/server` | `serverStorefront(Astro.cookies)` | `PUBLIC_` | `references/astro.md` |
+| SvelteKit | `.../sveltekit` | `createSvelteKitStorefront()` | `.../sveltekit/server` | `serverStorefront(cookies)` | `PUBLIC_` | `references/sveltekit.md` |
 
-```typescript
-// lib/storefront.ts
-import { Environment } from "@commercengine/storefront";
-import { createNextjsStorefront } from "@commercengine/storefront/nextjs";
-
-export const storefront = createNextjsStorefront({
-  storeId: process.env.NEXT_PUBLIC_STORE_ID!,
-  apiKey: process.env.NEXT_PUBLIC_API_KEY!,
-  environment: Environment.Staging,
-  tokenStorageOptions: { prefix: "myapp_" },
-});
-```
-
-**Accessor rules:**
-- `storefront.publicStorefront()` — Root layouts, SSG, metadata, public reads
-- `storefront.clientStorefront()` — Client Components (throws on server)
-- `await storefront.serverStorefront()` — Server Components, Server Actions, Route Handlers (auto-reads cookies via `next/headers`)
-
-See `references/nextjs.md` for full patterns and examples.
-
-### TanStack Start
-
-```typescript
-// lib/storefront.ts
-import { Environment } from "@commercengine/storefront";
-import { createTanStackStartStorefront } from "@commercengine/storefront/tanstack-start";
-
-export const storefrontConfig = {
-  storeId: import.meta.env.VITE_STORE_ID,
-  apiKey: import.meta.env.VITE_API_KEY,
-  environment: Environment.Staging,
-  tokenStorageOptions: { prefix: "myapp_" },
-};
-
-export const storefront = createTanStackStartStorefront(storefrontConfig);
-```
-
-```typescript
-// lib/storefront.server.ts (server-only module)
-import { createTanStackStartServerStorefront } from "@commercengine/storefront/tanstack-start/server";
-import { storefrontConfig } from "./storefront";
-
-const factory = createTanStackStartServerStorefront(storefrontConfig);
-
-export function serverStorefront() {
-  return factory.serverStorefront();
-}
-```
-
-**Accessor rules:**
-- `storefront.publicStorefront()` — Route loaders, pre-rendering, public reads
-- `storefront.clientStorefront()` — Client-side components (throws on server)
-- `serverStorefront()` — Server functions (from separate `/server` entry)
-
-See `references/tanstack-start.md` for full patterns and examples.
+All imports above are subpaths of `@commercengine/storefront`. See the framework-specific reference for full setup, accessor rules, patterns, and examples.
 
 ## Hosted Checkout + SSR
 
@@ -209,7 +143,7 @@ useEffect(() => {
 ## See Also
 
 - `setup/` - Basic SDK installation and framework detection
-- `ssr/` - Custom SSR bindings with `@commercengine/ssr-utils` (SvelteKit, Nuxt, Astro)
+- `ssr/` - Custom SSR bindings with `@commercengine/ssr-utils` (Nuxt and other unsupported frameworks)
 - `auth/` - Authentication flows
 - `cart-checkout/` - Cart and Hosted Checkout patterns
 

@@ -49,13 +49,13 @@ Core principle: **public reads** use the public accessor (API-key-backed, build-
 **Webhooks & events** -> `ce-webhooks`
 - Event handling, signature verification, async processing
 
-**Next.js / TanStack Start patterns** -> `ce-ssr-patterns`
+**Next.js / TanStack Start / Astro / SvelteKit patterns** -> `ce-ssr-patterns`
 - `publicStorefront()` / `clientStorefront()` / `serverStorefront()`
 - Bootstrap, Server Actions/functions, pre-rendering, token management
-- Concrete references for Next.js and TanStack Start
+- Concrete references for Next.js, TanStack Start, Astro, and SvelteKit
 
 **Custom SSR bindings** -> `ce-ssr`
-- `@commercengine/ssr-utils` for frameworks without a first-party wrapper (SvelteKit, Nuxt, Astro)
+- `@commercengine/ssr-utils` for frameworks without a first-party wrapper (Nuxt, etc.)
 - `ServerTokenStorage` and `CookieAdapter`
 - Public build reads vs live request sessions
 
@@ -81,7 +81,7 @@ Canonical pages for a CE storefront and the skills/methods each needs:
 2. **Replace public catalog reads first** - Move listing/detail/category pages to `publicStorefront()` / `public()`.
 3. **Add session-aware flows** - Auth, cart, checkout, account, orders should use `clientStorefront()` / `serverStorefront()` / `session()`.
 4. **Adopt Hosted Checkout or custom checkout** - Follow `ce-cart-checkout`.
-5. **Add framework-specific SSR behavior if needed** - `ce-ssr-patterns` (Next.js / TanStack Start) or `ce-ssr` (custom bindings).
+5. **Add framework-specific SSR behavior if needed** - `ce-ssr-patterns` (Next.js / TanStack Start / Astro / SvelteKit) or `ce-ssr` (custom bindings for Nuxt, etc.).
 
 > Replace one data source at a time. Keep existing UI components where possible and swap the data layer first.
 
@@ -98,6 +98,8 @@ User Request
     ├─ "Webhooks" / "Events" / "Sync"                → ce-webhooks
     ├─ "Next.js" / "Server Actions"                  → ce-ssr-patterns (references/nextjs.md)
     ├─ "TanStack Start" / "Server functions"         → ce-ssr-patterns (references/tanstack-start.md)
+    ├─ "Astro" / "Astro SSR"                         → ce-ssr-patterns (references/astro.md)
+    ├─ "SvelteKit" / "Svelte" / "Load functions"     → ce-ssr-patterns (references/sveltekit.md)
     └─ "SSR" / "Cookies" / "Custom binding"          → ce-ssr
 ```
 

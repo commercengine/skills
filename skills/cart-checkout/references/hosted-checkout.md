@@ -7,7 +7,7 @@ Commerce Engine Hosted Checkout is a pre-built, embeddable checkout that runs in
 - **Ship faster** — skip building cart UI, payment forms, and checkout logic
 - **PCI compliant** — payment data never touches your servers
 - **Always up to date** — new payment methods and features deployed automatically
-- **Framework agnostic** — React, Vue, Svelte, Solid, or plain HTML
+- **Framework agnostic** — React, Vue, Svelte, Solid, Astro, or plain HTML
 - **Store isolation by default** — each store loads from its own subdomain origin
 - **Zero layout shift** — iframe loads in the background
 
@@ -15,7 +15,7 @@ Commerce Engine Hosted Checkout is a pre-built, embeddable checkout that runs in
 
 | Package | Description |
 |---------|-------------|
-| `@commercengine/checkout` | Framework bindings for React, Vue, Svelte, and Solid |
+| `@commercengine/checkout` | React, Vue, Svelte, and Solid bindings plus root helpers like `initCheckout()`, `getCheckout()`, and `subscribeToCheckout()` |
 | `@commercengine/js` | Vanilla JS SDK, also available via CDN |
 
 ## Checkout Studio (No-Code Customization)
@@ -127,7 +127,7 @@ Event listener methods: `checkout.on(event, handler)`, `checkout.once(event, han
 
 ## Setup by Framework
 
-> **All framework examples below use `authMode: "provided"` with two-way token sync.** This is the required pattern for any app that uses the Storefront SDK. For standalone embeds on static HTML / no-code platforms without the SDK, see [Managed Mode](#managed-mode-standalone-embeds-only).
+> **All framework examples below use `authMode: "provided"` with two-way token sync.** This is the required pattern for any app that uses the Storefront SDK. Astro uses the root `@commercengine/checkout` helpers instead of a dedicated Astro binding. For standalone embeds on static HTML / no-code platforms without the SDK, see [Managed Mode](#managed-mode-standalone-embeds-only).
 
 ### SPA Storefront Config (Shared)
 
@@ -517,6 +517,126 @@ function CartButton() {
 ```
 
 **SolidStart:** Initialize in root layout with `onMount`/`onCleanup` using the same `authMode: "provided"` pattern.
+
+### Astro
+
+Astro does not need a dedicated checkout binding. Use the root `@commercengine/checkout` helpers in a shared layout script or client module.
+
+```bash
+npm install @commercengine/checkout @commercengine/storefront
+```
+
+**Step 1: Create a client module that owns Storefront SDK + Hosted Checkout init**
+
+```typescript
+// src/lib/storefront-client.ts
+import { getCheckout, initCheckout } from "@commercengine/checkout";
+import { BrowserTokenStorage, createStorefront, Environment } from "@commercengine/storefront";
+
+const tokenStorage = new BrowserTokenStorage("myapp_");
+
+const storefront = createStorefront({
+  storeId: import.meta.env.PUBLIC_STORE_ID ?? "",
+  apiKey: import.meta.env.PUBLIC_API_KEY ?? "",
+  environment:
+    import.meta.env.PUBLIC_CE_ENV === "staging" ? Environment.Staging : Environment.Production,
+  session: {
+    tokenStorage,
+    onTokensUpdated: (accessToken, refreshToken) => {
+      getCheckout().updateTokens(accessToken, refreshToken);
+    },
+  },
+});
+
+const sessionSdk = storefront.session();
+let initPromise: Promise<void> | null = null;
+
+export function initHostedCheckout() {
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    const accessToken = await sessionSdk.ensureAccessToken();
+    const refreshToken = await tokenStorage.getRefreshToken();
+
+    initCheckout({
+      storeId: import.meta.env.PUBLIC_STORE_ID ?? "",
+      apiKey: import.meta.env.PUBLIC_API_KEY ?? "",
+      environment: import.meta.env.PUBLIC_CE_ENV === "staging" ? "staging" : "production",
+      authMode: "provided",
+      accessToken: accessToken ?? undefined,
+      refreshToken: refreshToken ?? undefined,
+      onTokensUpdated: ({ accessToken, refreshToken }) => {
+        void sessionSdk.setTokens(accessToken, refreshToken);
+      },
+    });
+  })().catch((error) => {
+    initPromise = null;
+    throw error;
+  });
+
+  return initPromise;
+}
+```
+
+**Step 2: Call it from the shared layout**
+
+```astro
+---
+import { ClientRouter } from "astro:transitions";
+---
+
+<html>
+  <head>
+    <ClientRouter />
+  </head>
+  <body>
+    <div data-page-content>
+      <slot />
+    </div>
+
+    <script>
+      import { initHostedCheckout } from "@/lib/storefront-client";
+
+      function bootstrap() {
+        void initHostedCheckout();
+      }
+
+      bootstrap();
+      document.addEventListener("astro:page-load", bootstrap);
+    </script>
+  </body>
+</html>
+```
+
+**Highly Recommended: preserve the same iframe across `ClientRouter` navigations**
+
+Astro's default client-router swap replaces `document.body`, so a body-mounted checkout iframe will remount on every navigation. `transition:persist` alone does not prevent iframe reloads. If remounting is acceptable, stop at the previous step. If you need to keep the iframe alive, install an app-level custom swap in the layout and only replace your page content region.
+
+```astro
+<script>
+  import { swapFunctions } from "astro:transitions/client";
+
+  document.addEventListener("astro:before-swap", (event) => {
+    event.swap = () => {
+      swapFunctions.deselectScripts(event.newDocument);
+      swapFunctions.swapRootAttributes(event.newDocument);
+      swapFunctions.swapHeadElements(event.newDocument);
+      const restoreFocus = swapFunctions.saveFocus();
+
+      const nextContent = event.newDocument.querySelector("[data-page-content]");
+      const currentContent = document.querySelector("[data-page-content]");
+
+      if (nextContent && currentContent) {
+        swapFunctions.swapBodyElement(nextContent, currentContent);
+      } else {
+        swapFunctions.swapBodyElement(event.newDocument.body, document.body);
+      }
+
+      restoreFocus();
+    };
+  });
+</script>
+```
 
 ### Vanilla JS (ES Module)
 

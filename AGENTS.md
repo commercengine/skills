@@ -18,8 +18,8 @@ skills/
 │   ├── cart-checkout/        # Cart, checkout & payments
 │   ├── orders/               # Order management & returns
 │   ├── webhooks/             # Webhook events & syncing
-│   ├── ssr-patterns/         # Next.js & TanStack Start SSR patterns
-│   └── ssr/                  # Custom SSR bindings (SvelteKit, Nuxt, Astro)
+│   ├── ssr-patterns/         # Next.js, TanStack Start, Astro & SvelteKit SSR patterns
+│   └── ssr/                  # Custom SSR bindings (Nuxt and other unsupported frameworks)
 └── README.md                 # User-facing documentation
 ```
 
@@ -36,8 +36,8 @@ User Request
     ├─ "Cart" / "Checkout" / "Payments"      → cart-checkout/
     ├─ "Orders" / "Returns" / "Shipments"    → orders/
     ├─ "Webhooks" / "Events" / "Sync"                → webhooks/
-    ├─ "Next.js" / "TanStack Start" / "Server Actions" → ssr-patterns/
-    └─ "SSR" / "Cookies" / "Custom binding"            → ssr/
+    ├─ "Next.js" / "TanStack Start" / "Astro" / "SvelteKit" / "Server Actions" → ssr-patterns/
+    └─ "SSR" / "Cookies" / "Custom binding" (Nuxt, etc.)                     → ssr/
 ```
 
 ### Skill Structure

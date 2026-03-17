@@ -1,6 +1,6 @@
 ---
 name: ce-ssr
-description: Build custom SSR bindings with @commercengine/ssr-utils for frameworks without a first-party Commerce Engine wrapper (SvelteKit, Nuxt, Astro). CookieAdapter, ServerTokenStorage, and public vs session patterns.
+description: Build custom SSR bindings with @commercengine/ssr-utils for frameworks without a first-party Commerce Engine wrapper (Nuxt and other unsupported frameworks). CookieAdapter, ServerTokenStorage, and public vs session patterns.
 license: MIT
 allowed-tools: Bash
 metadata:
@@ -22,9 +22,9 @@ Use `@commercengine/ssr-utils` only for frameworks that do **not** have a first-
 |-----------|-------------|
 | Next.js | `@commercengine/storefront/nextjs` → see `ssr-patterns/` |
 | TanStack Start | `@commercengine/storefront/tanstack-start` → see `ssr-patterns/` |
-| SvelteKit | `@commercengine/ssr-utils` → **this skill** |
+| Astro | `@commercengine/storefront/astro` → see `ssr-patterns/` |
+| SvelteKit | `@commercengine/storefront/sveltekit` → see `ssr-patterns/` |
 | Nuxt | `@commercengine/ssr-utils` → **this skill** |
-| Astro (SSR) | `@commercengine/ssr-utils` → **this skill** |
 
 ## Why This Matters
 
@@ -54,10 +54,16 @@ User Request: "Add SSR support" / "Cookie-based auth" / "Server-side rendering"
     ├─ TanStack Start?
     │   └─ YES → Use @commercengine/storefront/tanstack-start → see ssr-patterns/
     │
+    ├─ Astro?
+    │   └─ YES → Use @commercengine/storefront/astro → see ssr-patterns/
+    │
+    ├─ SvelteKit?
+    │   └─ YES → Use @commercengine/storefront/sveltekit → see ssr-patterns/
+    │
     ├─ Public build/prerender read?
     │   └─ YES → Use PublicStorefrontSDK / storefront.public()
     │
-    ├─ Live request with cookies? (SvelteKit, Nuxt, Astro, etc.)
+    ├─ Live request with cookies? (Nuxt, etc.)
     │   └─ Create CookieAdapter → ServerTokenStorage → SessionStorefrontSDK
     │
     └─ Optional: wrap the base config in your own framework helper
@@ -88,17 +94,6 @@ npm install @commercengine/storefront @commercengine/ssr-utils
 
 ### 1. Build the CookieAdapter
 
-**SvelteKit**
-
-```typescript
-const adapter = {
-  get: (name: string) => cookies.get(name) ?? null,
-  set: (name: string, value: string, options?: Parameters<typeof cookies.set>[2]) =>
-    cookies.set(name, value, options),
-  delete: (name: string) => cookies.delete(name),
-};
-```
-
 **Nuxt / h3**
 
 ```typescript
@@ -112,16 +107,7 @@ const adapter = {
 };
 ```
 
-**Astro (SSR)**
-
-```typescript
-const adapter = {
-  get: (name: string) => Astro.cookies.get(name)?.value ?? null,
-  set: (name: string, value: string, options?: Parameters<typeof Astro.cookies.set>[2]) =>
-    Astro.cookies.set(name, value, options),
-  delete: (name: string) => Astro.cookies.delete(name),
-};
-```
+> **Note**: SvelteKit and Astro now have first-party wrappers (`@commercengine/storefront/sveltekit` and `@commercengine/storefront/astro`). Use those instead of building custom adapters. See `ssr-patterns/`.
 
 ### 2. Create `ServerTokenStorage`
 
@@ -199,14 +185,14 @@ const sdk = new SessionStorefrontSDK({
 |-------|-------|----------|
 | CRITICAL | Using `BrowserTokenStorage` in SSR code | Use `ServerTokenStorage` |
 | CRITICAL | Using session SDK for build/prerender public pages | Use `PublicStorefrontSDK` or `storefront.public()` |
-| HIGH | Using `ssr-utils` directly in Next.js or TanStack Start | Use the first-party wrappers: `@commercengine/storefront/nextjs` or `@commercengine/storefront/tanstack-start` |
+| HIGH | Using `ssr-utils` directly in Next.js, TanStack Start, Astro, or SvelteKit | Use the first-party wrappers: `@commercengine/storefront/nextjs`, `/tanstack-start`, `/astro`, or `/sveltekit` |
 | HIGH | Client and server cookie formats drifting | Keep prefix, path, secure, sameSite, and encoding aligned |
 | MEDIUM | Scattering `ensureAccessToken()` across feature code | If you want eager bootstrap, centralize it in one request bootstrap/helper instead of calling it before every cart/auth/customer method |
 
 ## See Also
 
 - `setup/` - SDK installation and framework detection
-- `ssr-patterns/` - First-party SSR patterns for Next.js and TanStack Start
+- `ssr-patterns/` - First-party SSR patterns for Next.js, TanStack Start, Astro, and SvelteKit
 - `auth/` - Authentication flows
 - `cart-checkout/` - Hosted Checkout sync details
 

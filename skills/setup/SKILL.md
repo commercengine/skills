@@ -21,6 +21,8 @@ All frameworks install `@commercengine/storefront` — a unified package with su
 - **SPA**: `import { createStorefront } from "@commercengine/storefront"` → `storefront.public()` / `storefront.session()`
 - **Next.js**: `import { createNextjsStorefront } from "@commercengine/storefront/nextjs"` → `storefront.publicStorefront()` / `storefront.clientStorefront()` / `await storefront.serverStorefront()`
 - **TanStack Start**: `import { createTanStackStartStorefront } from "@commercengine/storefront/tanstack-start"` → `storefront.publicStorefront()` / `storefront.clientStorefront()` + separate server entry for `serverStorefront()`
+- **Astro**: `import { createAstroStorefront } from "@commercengine/storefront/astro"` → `storefront.publicStorefront()` / `storefront.clientStorefront()` + separate server entry for `serverStorefront(cookies)`
+- **SvelteKit**: `import { createSvelteKitStorefront } from "@commercengine/storefront/sveltekit"` → `storefront.publicStorefront()` / `storefront.clientStorefront()` + separate server entry for `serverStorefront(cookies)`
 
 The `@commercengine/storefront-sdk-nextjs` package is **deprecated**. Use `@commercengine/storefront/nextjs` instead.
 
@@ -30,8 +32,8 @@ The `@commercengine/storefront-sdk-nextjs` package is **deprecated**. Use `@comm
 |------|--------|
 | 1. Detect framework | Check `package.json` and config files |
 | 2. Install SDK | `@commercengine/storefront` (all frameworks) |
-| 3. Initialize storefront | SPA: `createStorefront(...)`, Next.js: `createNextjsStorefront(...)`, TanStack Start: `createTanStackStartStorefront(...)` |
-| 4. Set env vars | `VITE_STORE_ID` / `NEXT_PUBLIC_STORE_ID` and `VITE_API_KEY` / `NEXT_PUBLIC_API_KEY` |
+| 3. Initialize storefront | SPA: `createStorefront(...)`, Next.js: `createNextjsStorefront(...)`, TanStack Start: `createTanStackStartStorefront(...)`, Astro: `createAstroStorefront(...)`, SvelteKit: `createSvelteKitStorefront(...)` |
+| 4. Set env vars | Next.js: `NEXT_PUBLIC_*`, TanStack Start / SPA: `VITE_*`, Astro / SvelteKit: `PUBLIC_*` |
 | 5. Bootstrap session | SPA: call `sdk.ensureAccessToken()` once during startup if you want eager session setup, SSR frameworks: `storefront.bootstrap()` in a client component |
 | 6. Use the right accessor | Public reads: `publicStorefront()` / `public()`, Session flows: `clientStorefront()` / `serverStorefront()` / `session()` |
 | 7. Hosted Checkout (if used) | **Required**: `authMode: "provided"` with two-way token sync (any app using the Storefront SDK) |
@@ -94,9 +96,9 @@ Check `package.json` and config files to identify the framework:
 |-----------|-----------|-------------|-----------------|
 | `next` in deps + `next.config.*` | Next.js | `@commercengine/storefront/nextjs` | Built-in (cookie-backed) |
 | `@tanstack/react-start` in deps | TanStack Start | `@commercengine/storefront/tanstack-start` | Built-in (cookie-backed) |
-| `@sveltejs/kit` in deps | SvelteKit | `@commercengine/storefront` + `@commercengine/ssr-utils` | `ServerTokenStorage` |
+| `astro` in deps | Astro | `@commercengine/storefront/astro` | Built-in (cookie-backed) |
+| `@sveltejs/kit` in deps | SvelteKit | `@commercengine/storefront/sveltekit` | Built-in (cookie-backed) |
 | `nuxt` in deps | Nuxt | `@commercengine/storefront` + `@commercengine/ssr-utils` | `ServerTokenStorage` |
-| `astro` in deps + SSR adapter | Astro (SSR) | `@commercengine/storefront` + `@commercengine/ssr-utils` | `ServerTokenStorage` |
 | `vite.config.*` + browser app | React / Vue / Svelte / Solid SPA | `@commercengine/storefront` | `BrowserTokenStorage` |
 | `express` in deps | Express / Node.js | `@commercengine/storefront` | `MemoryTokenStorage` or custom `TokenStorage` |
 | None of above | Vanilla JS | `@commercengine/storefront` | `BrowserTokenStorage` |
@@ -121,7 +123,19 @@ User Request: "Set up Commerce Engine" / "Add e-commerce"
     │   │        → Server-only: createTanStackStartServerStorefront() from .../tanstack-start/server
     │   └─ NO ↓
     │
-    ├─ Other SSR framework (SvelteKit, Nuxt, Astro)?
+    ├─ Astro detected?
+    │   ├─ YES → Install @commercengine/storefront
+    │   │        → Use createAstroStorefront() from @commercengine/storefront/astro
+    │   │        → Server-only: createAstroServerStorefront() from .../astro/server
+    │   └─ NO ↓
+    │
+    ├─ SvelteKit detected?
+    │   ├─ YES → Install @commercengine/storefront
+    │   │        → Use createSvelteKitStorefront() from @commercengine/storefront/sveltekit
+    │   │        → Server-only: createSvelteKitServerStorefront() from .../sveltekit/server
+    │   └─ NO ↓
+    │
+    ├─ Other SSR framework (Nuxt)?
     │   ├─ YES → Install @commercengine/storefront + @commercengine/ssr-utils
     │   │        → Use ServerTokenStorage with CookieAdapter
     │   └─ NO  → Install @commercengine/storefront
@@ -256,6 +270,97 @@ Mount `StorefrontBootstrap` in the root layout (`__root.tsx`).
 # .env
 VITE_STORE_ID=your-store-id
 VITE_API_KEY=your-api-key
+```
+
+### Astro
+
+```bash
+npm install @commercengine/storefront
+```
+
+```typescript
+// src/lib/storefront-config.ts
+import { Environment } from "@commercengine/storefront";
+import type { AstroStorefrontConfig } from "@commercengine/storefront/astro";
+
+export const storefrontConfig: AstroStorefrontConfig = {
+  storeId: import.meta.env.PUBLIC_STORE_ID,
+  apiKey: import.meta.env.PUBLIC_API_KEY,
+  environment: Environment.Staging,
+  tokenStorageOptions: { prefix: "myapp_" },
+};
+```
+
+```typescript
+// src/lib/storefront.ts
+import { createAstroStorefront } from "@commercengine/storefront/astro";
+import { storefrontConfig } from "./storefront-config";
+
+export const storefront = createAstroStorefront(storefrontConfig);
+```
+
+```typescript
+// src/lib/server-storefront.ts (server-only)
+import { createAstroServerStorefront } from "@commercengine/storefront/astro/server";
+import { storefrontConfig } from "./storefront-config";
+
+export const serverStorefront = createAstroServerStorefront(storefrontConfig);
+```
+
+Bootstrap in a root layout script, then use `serverStorefront.serverStorefront(Astro.cookies)` in SSR pages/API routes.
+
+> For the full Astro request model, see `ce-ssr-patterns`.
+
+```env
+# .env
+PUBLIC_STORE_ID=your-store-id
+PUBLIC_API_KEY=your-api-key
+```
+
+### SvelteKit
+
+```bash
+npm install @commercengine/storefront
+```
+
+```typescript
+// src/lib/storefront-config.ts
+import { Environment } from "@commercengine/storefront";
+import type { SvelteKitStorefrontConfig } from "@commercengine/storefront/sveltekit";
+import { env } from "$env/static/public";
+
+export const storefrontConfig: SvelteKitStorefrontConfig = {
+  storeId: env.PUBLIC_STORE_ID,
+  apiKey: env.PUBLIC_API_KEY,
+  environment: Environment.Staging,
+  tokenStorageOptions: { prefix: "myapp_" },
+};
+```
+
+```typescript
+// src/lib/storefront.ts
+import { createSvelteKitStorefront } from "@commercengine/storefront/sveltekit";
+import { storefrontConfig } from "./storefront-config";
+
+export const storefront = createSvelteKitStorefront(storefrontConfig);
+```
+
+```typescript
+// src/lib/server/storefront.ts (server-only — $lib/server/ is enforced by SvelteKit)
+import { createSvelteKitServerStorefront } from "@commercengine/storefront/sveltekit/server";
+import { storefrontConfig } from "$lib/storefront-config";
+
+export const serverStorefront = createSvelteKitServerStorefront(storefrontConfig);
+```
+
+Bootstrap in root `+layout.svelte` via `onMount`, then use `serverStorefront.serverStorefront(cookies)` in server load functions, hooks, and actions.
+
+> For the full SvelteKit request model, see `ce-ssr-patterns`.
+
+```env
+# .env
+PUBLIC_STORE_ID=your-store-id
+PUBLIC_API_KEY=your-api-key
 ```
 
 ### React / Vue / Svelte / Solid (SPA)
@@ -440,7 +545,7 @@ Analytics are server-side and automated. Commerce Engine collects e-commerce eve
 ## See Also
 
 - `ssr-patterns/` - Next.js and TanStack Start `publicStorefront()` / `clientStorefront()` / `serverStorefront()` patterns
-- `ssr/` - Custom SSR bindings with `@commercengine/ssr-utils` (SvelteKit, Nuxt, Astro)
+- `ssr/` - Custom SSR bindings with `@commercengine/ssr-utils` (Nuxt and other unsupported frameworks)
 - `auth/` - Authentication flows
 - `cart-checkout/` - Hosted Checkout sync patterns
 
