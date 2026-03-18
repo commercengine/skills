@@ -1,0 +1,122 @@
+{
+  "name": "commercengine-skills",
+  "owner": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, and SSR/meta-framework patterns (Next.js, TanStack Start, Astro, SvelteKit)",
+    "pluginRoot": "skills"
+  },
+  "plugins": [
+    {
+      "name": "ce",
+      "description": "Commerce Engine router - automatically routes to the right skill based on your e-commerce task",
+      "version": "1.0.0",
+      "source": "./skills/ce",
+      "homepage": "https://www.commercengine.io/docs",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["commerce-engine", "ecommerce", "router"]
+    },
+    {
+      "name": "ce-setup",
+      "description": "Set up the Commerce Engine TypeScript SDK in any project with framework detection and token storage selection",
+      "version": "1.0.0",
+      "source": "./skills/setup",
+      "homepage": "https://www.commercengine.io/docs/sdk/installation",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["setup", "sdk", "framework-detection", "token-storage"]
+    },
+    {
+      "name": "ce-auth",
+      "description": "Commerce Engine authentication - anonymous auth, OTP login (email/phone/WhatsApp), password auth, token refresh, user profile management",
+      "version": "1.0.0",
+      "source": "./skills/auth",
+      "homepage": "https://www.commercengine.io/docs/storefront/authentication",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["auth", "login", "otp", "anonymous", "tokens"]
+    },
+    {
+      "name": "ce-catalog",
+      "description": "Commerce Engine product catalog - products, variants, SKUs, categories, faceted search, reviews, and recommendations",
+      "version": "1.0.0",
+      "source": "./skills/catalog",
+      "homepage": "https://www.commercengine.io/docs/storefront/catalog",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["catalog", "products", "categories", "search", "variants"]
+    },
+    {
+      "name": "ce-cart-checkout",
+      "description": "Commerce Engine cart management, checkout flow, and payment integration with hosted checkout support",
+      "version": "1.0.0",
+      "source": "./skills/cart-checkout",
+      "homepage": "https://www.commercengine.io/docs/storefront/cart",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["cart", "checkout", "payments", "coupons", "fulfillment"]
+    },
+    {
+      "name": "ce-orders",
+      "description": "Commerce Engine order management - create orders, shipment tracking, payment status, cancellation, returns, and refunds",
+      "version": "1.0.0",
+      "source": "./skills/orders",
+      "homepage": "https://www.commercengine.io/docs/storefront/checkout",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["orders", "returns", "shipments", "payments", "tracking"]
+    },
+    {
+      "name": "ce-webhooks",
+      "description": "Commerce Engine webhook events - 14 event types for orders, payments, refunds, and shipments with signature verification",
+      "version": "1.0.0",
+      "source": "./skills/webhooks",
+      "homepage": "https://www.commercengine.io/docs/sdk/nodejs-integration",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["webhooks", "events", "sync", "notifications"]
+    },
+    {
+      "name": "ce-ssr-patterns",
+      "description": "SSR/meta-framework patterns for Commerce Engine - Next.js and TanStack Start with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions/actions, pre-rendering, and token management",
+      "version": "1.0.0",
+      "source": "./skills/ssr-patterns",
+      "homepage": "https://www.commercengine.io/docs/sdk",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["nextjs", "tanstack-start", "ssr", "server-actions", "server-functions", "cookies", "storefront", "pre-rendering"]
+    },
+    {
+      "name": "ce-ssr",
+      "description": "Build custom SSR bindings with @commercengine/ssr-utils for SvelteKit, Nuxt, Astro. CookieAdapter, ServerTokenStorage, and public vs session patterns.",
+      "version": "2.0.0",
+      "source": "./skills/ssr",
+      "homepage": "https://www.commercengine.io/docs/sdk/token-management",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+      "category": "ecommerce",
+      "keywords": ["ssr", "ssg", "cookies", "token-storage", "ssr-utils", "sveltekit", "nuxt", "astro"]
+    }
+  ]
+}

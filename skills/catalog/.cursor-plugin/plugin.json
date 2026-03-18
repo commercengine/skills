@@ -1,0 +1,16 @@
+{
+  "name": "ce-catalog",
+  "displayName": "Commerce Engine Catalog",
+  "description": "Commerce Engine product catalog - products, variants, SKUs, categories, faceted search, reviews, and recommendations",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/storefront/catalog",
+  "repository": "https://github.com/commercengine/skills",
+  "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+  "keywords": ["catalog", "products", "categories", "search", "variants"],
+  "skills": "."
+}

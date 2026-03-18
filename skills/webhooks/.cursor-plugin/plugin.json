@@ -1,0 +1,16 @@
+{
+  "name": "ce-webhooks",
+  "displayName": "Commerce Engine Webhooks",
+  "description": "Commerce Engine webhook events - 14 event types for orders, payments, refunds, and shipments with signature verification",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/sdk/nodejs-integration",
+  "repository": "https://github.com/commercengine/skills",
+  "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+  "keywords": ["webhooks", "events", "sync", "notifications"],
+  "skills": "."
+}

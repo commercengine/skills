@@ -1,0 +1,16 @@
+{
+  "name": "ce-ssr",
+  "displayName": "Commerce Engine Custom SSR",
+  "description": "Build custom SSR bindings with @commercengine/ssr-utils for SvelteKit, Nuxt, Astro. CookieAdapter, ServerTokenStorage, and public vs session patterns.",
+  "version": "2.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/sdk/token-management",
+  "repository": "https://github.com/commercengine/skills",
+  "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+  "keywords": ["ssr", "ssg", "cookies", "token-storage", "ssr-utils", "sveltekit", "nuxt", "astro"],
+  "skills": "."
+}
