@@ -14,8 +14,11 @@
   <a href="https://www.commercengine.io/docs">
     <img alt="Documentation" src="https://img.shields.io/badge/documentation-commercengine-00bf6f.svg" />
   </a>
-  <a href="https://www.commercengine.io/docs/ai/overview">
+  <a href="https://code.claude.com/docs/en/discover-plugins">
     <img alt="Claude Code" src="https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet.svg" />
+  </a>
+  <a href="https://cursor.com/docs/plugins">
+    <img alt="Cursor" src="https://img.shields.io/badge/Cursor-Plugin-2962FF.svg" />
   </a>
   <br />
   <br />
