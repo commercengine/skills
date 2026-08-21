@@ -1,0 +1,14 @@
+{
+  "name": "ce-seo",
+  "description": "SEO and agent-readable content for Commerce Engine storefronts using @commercengine/seo. Head metadata, JSON-LD (Product/ProductGroup with variesBy), canonical URLs, robots.txt, sitemaps, llms.txt, and Markdown mirrors across React SPA, Next.js, Astro, SvelteKit, and TanStack Start.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/sdk",
+  "repository": "https://github.com/commercengine/skills",
+  "keywords": ["seo", "json-ld", "schema-org", "sitemap", "robots", "llms-txt", "metadata", "canonical", "markdown-mirror", "structured-data"],
+  "category": "ecommerce"
+}

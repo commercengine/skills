@@ -70,6 +70,8 @@ git clone https://github.com/commercengine/skills ~/.claude/skills/commercengine
 | `ce-webhooks` | Webhook events & syncing | Real-time events, notifications | Webhooks |
 | `ce-ssr-patterns` | Next.js & TanStack Start patterns | SSR, Server Actions/functions, pre-rendering | Framework Patterns |
 | `ce-ssr` | Custom SSR bindings | SvelteKit, Nuxt, Astro with ssr-utils | Custom SSR |
+| `ce-seo` | SEO, structured data & agent-readable content | Metadata, JSON-LD, sitemaps, robots.txt, llms.txt | SEO |
+| `ce-ai` | WebMCP agent tools | Letting browser AI agents search, cart and navigate | AI Agents |
 
 ## Quick Start
 
@@ -105,6 +107,9 @@ CE_API_KEY=your-api-key
 | "Set up webhooks for order events" | `ce-webhooks` |
 | "Use Server Actions for cart mutations" | `ce-ssr-patterns` |
 | "Set up TanStack Start with server functions" | `ce-ssr-patterns` |
+| "Add JSON-LD and a sitemap to my storefront" | `ce-seo` |
+| "Generate llms.txt and Markdown mirrors" | `ce-seo` |
+| "Let AI agents add things to the cart" | `ce-ai` |
 
 ## Repository Structure
 
@@ -132,8 +137,14 @@ commerce-engine-skills/
 │   ├── ssr-patterns/            # Next.js & TanStack Start
 │   │   ├── SKILL.md
 │   │   └── references/
-│   └── ssr/                     # Custom SSR bindings
-│       └── SKILL.md
+│   ├── ssr/                     # Custom SSR bindings
+│   │   └── SKILL.md
+│   ├── seo/                     # SEO & structured data
+│   │   ├── SKILL.md
+│   │   └── references/
+│   └── ai/                      # WebMCP agent tools
+│       ├── SKILL.md
+│       └── references/
 └── README.md
 ```
 

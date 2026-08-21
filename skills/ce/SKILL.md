@@ -1,6 +1,6 @@
 ---
 name: ce
-description: Commerce Engine router. Use when the user asks about building a storefront, setting up the SDK, auth, products, cart, checkout, orders, webhooks, SSR, Next.js, or TanStack Start e-commerce patterns.
+description: Commerce Engine router. Use when the user asks about building a storefront, setting up the SDK, auth, products, cart, checkout, orders, webhooks, SSR, SEO, AI agent tools, Next.js, or TanStack Start e-commerce patterns.
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
@@ -54,6 +54,15 @@ Core principle: **public reads** use the public accessor (API-key-backed, build-
 - Bootstrap, Server Actions/functions, pre-rendering, token management
 - Concrete references for Next.js, TanStack Start, Astro, and SvelteKit
 
+**SEO & structured data** -> `ce-seo`
+- Head metadata, JSON-LD (`Product`/`ProductGroup` with `variesBy`), canonical URLs
+- `robots.txt`, sitemaps, `llms.txt`, and Markdown mirrors for AI crawlers
+- Server-mount vs prebuild, per deployment mode
+
+**AI agent tools (WebMCP)** -> `ce-ai`
+- Catalog, cart, navigation and session tools via `document.modelContext`
+- Capability gating, cart semantics, and where the agent boundary sits
+
 **Custom SSR bindings** -> `ce-ssr`
 - `@commercengine/ssr-utils` for frameworks without a first-party wrapper (Nuxt, etc.)
 - `ServerTokenStorage` and `CookieAdapter`
@@ -74,6 +83,8 @@ Canonical pages for a CE storefront and the skills/methods each needs:
 | Account | `/account` | auth | `getUserDetails`, `updateUserDetails`, `changePassword` |
 | Orders | `/account/orders` | orders | `listOrders` |
 | Order Detail | `/account/orders/[id]` | orders | `getOrderDetails`, `listOrderShipments`, `listOrderPayments` |
+| SEO assets | `/robots.txt`, `/sitemap.xml`, `/llms.txt` | seo | `createCommerceSeo`, mounted handler or prebuild |
+| Markdown mirrors | `/product/[slug].md` | seo | `productMarkdown`, content negotiation on the canonical URL |
 
 ## Converting an Existing Project
 
@@ -100,7 +111,9 @@ User Request
     ├─ "TanStack Start" / "Server functions"         → ce-ssr-patterns (references/tanstack-start.md)
     ├─ "Astro" / "Astro SSR"                         → ce-ssr-patterns (references/astro.md)
     ├─ "SvelteKit" / "Svelte" / "Load functions"     → ce-ssr-patterns (references/sveltekit.md)
-    └─ "SSR" / "Cookies" / "Custom binding"          → ce-ssr
+    ├─ "SSR" / "Cookies" / "Custom binding"          → ce-ssr
+    ├─ "SEO" / "Sitemap" / "JSON-LD" / "llms.txt"    → ce-seo
+    └─ "WebMCP" / "Agent tools" / "AI shopping"      → ce-ai
 ```
 
 ## Quick Navigation
@@ -113,3 +126,5 @@ User Request
 - `/ce-webhooks`
 - `/ce-ssr-patterns`
 - `/ce-ssr`
+- `/ce-seo`
+- `/ce-ai`

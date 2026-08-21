@@ -8,7 +8,7 @@
   },
   "metadata": {
     "version": "1.0.0",
-    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, and SSR/meta-framework patterns (Next.js, TanStack Start)"
+    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, SSR/meta-framework patterns (Next.js, TanStack Start, Astro, SvelteKit), SEO, and AI agent tools"
   },
   "plugins": [
     {
@@ -145,6 +145,36 @@
       "license": "MIT",
       "category": "ecommerce",
       "keywords": ["ssr", "ssg", "cookies", "token-storage", "ssr-utils", "sveltekit", "nuxt", "astro"]
+    },
+    {
+      "name": "ce-seo",
+      "description": "Commerce Engine SEO - head metadata, JSON-LD (Product/ProductGroup with variesBy), canonical URLs, robots.txt, sitemaps, llms.txt, and Markdown mirrors for React SPA, Next.js, Astro, SvelteKit, and TanStack Start",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/seo",
+      "homepage": "https://www.commercengine.io/docs/sdk",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["seo", "json-ld", "schema-org", "sitemap", "robots", "llms-txt", "metadata", "canonical", "structured-data"]
+    },
+    {
+      "name": "ce-ai",
+      "description": "Commerce Engine agent tools - WebMCP tools exposing catalog search, product/variant lookup, real cart mutations, navigation, and session state to browser AI agents",
+      "version": "1.0.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
+      "source": "./skills/ai",
+      "homepage": "https://www.commercengine.io/docs/sdk",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["webmcp", "ai-agents", "model-context", "agent-tools", "mcp", "cart-tools", "shopping-agent"]
     }
   ]
 }

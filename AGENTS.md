@@ -19,7 +19,9 @@ skills/
 │   ├── orders/               # Order management & returns
 │   ├── webhooks/             # Webhook events & syncing
 │   ├── ssr-patterns/         # Next.js, TanStack Start, Astro & SvelteKit SSR patterns
-│   └── ssr/                  # Custom SSR bindings (Nuxt and other unsupported frameworks)
+│   ├── ssr/                  # Custom SSR bindings (Nuxt and other unsupported frameworks)
+│   ├── seo/                  # SEO, structured data, sitemaps, llms.txt, Markdown mirrors
+│   └── ai/                   # WebMCP agent tools (catalog, cart, navigation, session)
 └── README.md                 # User-facing documentation
 ```
 
@@ -37,7 +39,9 @@ User Request
     ├─ "Orders" / "Returns" / "Shipments"    → orders/
     ├─ "Webhooks" / "Events" / "Sync"                → webhooks/
     ├─ "Next.js" / "TanStack Start" / "Astro" / "SvelteKit" / "Server Actions" → ssr-patterns/
-    └─ "SSR" / "Cookies" / "Custom binding" (Nuxt, etc.)                     → ssr/
+    ├─ "SSR" / "Cookies" / "Custom binding" (Nuxt, etc.)                     → ssr/
+    ├─ "SEO" / "Sitemap" / "JSON-LD" / "llms.txt"                            → seo/
+    └─ "WebMCP" / "Agent tools" / "AI shopping"                              → ai/
 ```
 
 ### Skill Structure
