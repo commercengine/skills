@@ -162,7 +162,6 @@ Check for these files to detect the framework:
 3. **Product vs Variant vs SKU confusion** - Always check `has_variant` before accessing variant data
 4. **Env var naming** - `VITE_STORE_ID` / `NEXT_PUBLIC_STORE_ID` and corresponding API key must be set
 5. **Cart expiration** - Carts have `expires_at`, handle gracefully
-6. **Deprecated package** - `@commercengine/storefront-sdk-nextjs` is deprecated; use `@commercengine/storefront/nextjs`
 
 ## Quality Checklist
 

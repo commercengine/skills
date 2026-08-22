@@ -8,8 +8,6 @@ npm install @commercengine/storefront
 
 Import the Next.js wrapper from `@commercengine/storefront/nextjs`.
 
-> `@commercengine/storefront-sdk-nextjs` is **deprecated**. Migrate to `@commercengine/storefront/nextjs`.
-
 ## Setup
 
 ### 1. Create Config
@@ -349,18 +347,6 @@ function Header() {
   );
 }
 ```
-
-## Migration from `@commercengine/storefront-sdk-nextjs`
-
-| Old | New |
-|-----|-----|
-| `@commercengine/storefront-sdk-nextjs` | `@commercengine/storefront/nextjs` |
-| `createStorefront()` | `createNextjsStorefront({ storeId, apiKey, ... })` |
-| `storefront.public()` | `storefront.publicStorefront()` |
-| `storefront.session()` (client) | `storefront.clientStorefront()` |
-| `storefront.session(await cookies())` | `await storefront.serverStorefront()` |
-| `StorefrontSDKInitializer` | Custom `StorefrontBootstrap` component calling `storefront.bootstrap()` |
-| Env var auto-inference | Explicit `storeId` and `apiKey` in config |
 
 ## Common Pitfalls
 
