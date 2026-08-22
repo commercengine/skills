@@ -73,6 +73,8 @@ export const commerceSeo = defineCommerceSeoConfig({
     description: "Small-batch goods.",
     locale: "en_US",
   },
+  // The package default is "/products" (plural). This storefront serves PDPs at
+  // /product/:slug, so it says so — a convention, not the default.
   routes: { productBase: "/product", categoryBase: "/category" },
 });
 
@@ -128,10 +130,12 @@ seo.config.site.url;                 // the configured origin
 | `/sitemap.xml` | Products + categories, sharded past 50k URLs |
 | `/llms.txt` | Store summary and category index for AI agents |
 | `/sitemap.md` | Markdown index of every `.md` mirror |
-| `/product/{slug}.md` | Markdown mirror of a PDP |
-| `/category/{slug}.md` | Markdown mirror of a PLP |
+| `{productBase}/{slug}.md` | Markdown mirror of a PDP |
+| `{categoryBase}/{slug}.md` | Markdown mirror of a PLP |
 
-In server mode the same paths are also content-negotiated: a request for `/product/shoe` with `Accept: text/markdown` returns the mirror, with `Vary: Accept` set.
+The mirror paths follow your configured route bases, defaulting to `/products/{slug}.md` and `/category/{slug}.md`. Set `productBase` once and structured data, canonicals, `.md` alternates, `llms.txt`, sitemaps and the request handler's own matching all move together — there is no second place to keep in sync.
+
+In server mode the same paths are also content-negotiated: a request for a PDP URL with `Accept: text/markdown` returns the mirror, with `Vary: Accept` set.
 
 ## Indexability
 

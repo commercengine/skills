@@ -16,6 +16,8 @@ export const commerceSeo = defineCommerceSeoConfig({
     logoUrl: "https://acme.example/logo.png",
     locale: "en_US",
   },
+  // Explicit because this storefront serves PDPs at /product/:slug.
+  // The package default is /products/:slug — see "Route Shapes" below.
   routes: { productBase: "/product", categoryBase: "/category" },
 });
 
@@ -40,14 +42,47 @@ One declaration, two packages, no chance of a crawler and an agent disagreeing a
 routes: { productBase: "/p", categoryBase: "/collections" }
 ```
 
-Defaults are `/product` and `/category`. `search` defaults to `/search?q=`.
+The package defaults are:
+
+```typescript
+DEFAULT_PRODUCT_BASE  = "/products";   // → /products/:slug
+DEFAULT_CATEGORY_BASE = "/category";   // → /category/:slug
+DEFAULT_SEARCH_PATH   = "/search";     // the query is appended as ?q=…
+```
+
+Note `/products`, plural. Many Commerce Engine starters explicitly configure `productBase: "/product"` — that is an **application convention, not the package default**. If you omit `routes` entirely you get `/products/:slug`, so a storefront whose pages live at `/product/:slug` must say so.
 
 ### Custom: a function per entity
 
+`routes.product` receives a `ProductRouteInput` and nothing else:
+
+```typescript
+interface ProductRouteInput {
+  productId: string;
+  productSlug: string;
+  variantId?: string | null;
+  variantSlug?: string | null;
+}
+```
+
 ```typescript
 routes: {
-  product: (input) => `/shop/${input.categorySlug ?? "all"}/${input.slug}`,
+  product: ({ productSlug, variantSlug }) =>
+    variantSlug ? `/shop/${productSlug}/${variantSlug}` : `/shop/${productSlug}`,
   category: (category) => `/collections/${category.slug}`,
+}
+```
+
+`routes.category` receives the whole `Category`, so `category.slug`, `category.id` and `category.name` are all available there.
+
+There is **no category information in `ProductRouteInput`** — a product can belong to several categories, so there is no single correct answer for the package to supply. A URL shape like `/shop/:category/:product` therefore has to get that segment from your own data:
+
+```typescript
+routes: {
+  product: async ({ productId, productSlug }) => {
+    const category = await cms.primaryCategoryFor(productId);
+    return `/shop/${category?.slug ?? "all"}/${productSlug}`;
+  },
 }
 ```
 
@@ -61,7 +96,12 @@ If your public URLs use CMS slugs rather than Commerce Engine slugs, the outboun
 
 ```typescript
 routes: {
-  product: (input) => `/products/${cmsSlugFor(input.id)}`,
+  // Outbound: CE entity → public URL. Use productId, the stable identifier.
+  product: async ({ productId }) => {
+    const slug = await cms.slugForProduct(productId);
+    return slug ? `/products/${slug}` : null;
+  },
+  // Inbound: public slug → something the catalog can look up.
   resolveProductRoute: async (publicSlug) => (await cms.lookup(publicSlug))?.ceProductId ?? null,
   resolveCategoryRoute: async (publicSlug) => (await cms.lookupCategory(publicSlug))?.ceId ?? null,
 }
