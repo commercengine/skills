@@ -135,7 +135,6 @@ useEffect(() => {
 |-------|-------|----------|
 | CRITICAL | Using `publicStorefront()` for cart, auth, customer, order, or payment flows | Use the session accessor (`serverStorefront()` on server, `clientStorefront()` on client) |
 | CRITICAL | Using `clientStorefront()` on the server | Use the server accessor — `clientStorefront()` throws on the server |
-| CRITICAL | Using deprecated `@commercengine/storefront-sdk-nextjs` | Migrate to `@commercengine/storefront/nextjs` with `createNextjsStorefront()` |
 | HIGH | Missing bootstrap component in root layout | Mount a client component calling `storefront.bootstrap()` once in the root layout |
 | HIGH | Bootstrapping anonymous auth in SSG/pre-render code | Use `publicStorefront()` instead — pre-render code must not create sessions |
 | MEDIUM | Fetching session-aware data in the root layout | Move it into a request-aware boundary and use the server accessor |

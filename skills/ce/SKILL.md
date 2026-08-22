@@ -19,8 +19,6 @@ All frameworks install `@commercengine/storefront` — a unified package with su
 
 Core principle: **public reads** use the public accessor (API-key-backed, build-safe). **Live session flows** (auth, cart, orders) use the session/client/server accessor.
 
-> `@commercengine/storefront-sdk-nextjs` is **deprecated**. Use `@commercengine/storefront/nextjs` instead.
-
 ## By Task
 
 **Setting up the SDK** -> `ce-setup`

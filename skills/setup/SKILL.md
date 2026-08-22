@@ -24,8 +24,6 @@ All frameworks install `@commercengine/storefront` — a unified package with su
 - **Astro**: `import { createAstroStorefront } from "@commercengine/storefront/astro"` → `storefront.publicStorefront()` / `storefront.clientStorefront()` + separate server entry for `serverStorefront(cookies)`
 - **SvelteKit**: `import { createSvelteKitStorefront } from "@commercengine/storefront/sveltekit"` → `storefront.publicStorefront()` / `storefront.clientStorefront()` + separate server entry for `serverStorefront(cookies)`
 
-The `@commercengine/storefront-sdk-nextjs` package is **deprecated**. Use `@commercengine/storefront/nextjs` instead.
-
 ## Quick Reference
 
 | Step | Action |
@@ -538,7 +536,6 @@ Analytics are server-side and automated. Commerce Engine collects e-commerce eve
 | HIGH | Using `public()` for cart/auth/customer/order flows | Use `session()` for any live user or anonymous session work |
 | HIGH | Using `CookieTokenStorage` as SSR server storage | Use `ServerTokenStorage` from `@commercengine/ssr-utils`, or use the built-in wrappers for Next.js / TanStack Start |
 | HIGH | Skipping `StorefrontBootstrap` in SSR apps | Mount a client component calling `storefront.bootstrap()` once in the root layout |
-| HIGH | Using deprecated `@commercengine/storefront-sdk-nextjs` | Migrate to `@commercengine/storefront/nextjs` with `createNextjsStorefront()` |
 | MEDIUM | Bootstrapping anonymous auth in build/prerender code | Use `public()` instead |
 | MEDIUM | Duplicating config across public and session clients | Prefer one `createStorefront(...)` factory |
 
