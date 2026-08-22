@@ -17,6 +17,20 @@ A SvelteKit app with `adapter-vercel` is server mode. The same app with `adapter
 
 One file per app. The handler owns every SEO path and content-negotiates Markdown on canonical URLs.
 
+**`robots` and `sitemap` must be enabled explicitly.** Every adapter takes the same
+`CommerceSeoRequestHandlerOptions`, where both default to `false`:
+
+```typescript
+robots?: boolean | CommerceRobotsOptions;    // default false
+sitemap?: boolean | CommerceSitemapRouteOptions;  // default false
+```
+
+That default is deliberate, not an oversight: an existing storefront may already own `/robots.txt`
+or `/sitemap.xml`, and a handler that claimed them on sight would silently shadow the app's own
+routes. Markdown mirrors, `Accept: text/markdown` negotiation, `/llms.txt`, and `/sitemap.md` are
+always served — nothing else plausibly owns those paths. Pass `{ robots: true, sitemap: true }`
+unless you are deliberately serving those two from your own routes.
+
 ### Next.js
 
 ```typescript
@@ -24,7 +38,7 @@ One file per app. The handler owns every SEO path and content-negotiates Markdow
 import { createNextjsSeoProxy } from "@commercengine/seo/nextjs/server";
 import { seo } from "@/lib/seo";
 
-export default createNextjsSeoProxy(seo);
+export default createNextjsSeoProxy(seo, { robots: true, sitemap: true });
 export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
 ```
 
@@ -40,7 +54,7 @@ Do **not** try to build these as route files. Two traps:
 import { createAstroSeoMiddleware } from "@commercengine/seo/astro/server";
 import { seo } from "./lib/seo";
 
-export const onRequest = createAstroSeoMiddleware(seo);
+export const onRequest = createAstroSeoMiddleware(seo, { robots: true, sitemap: true });
 ```
 
 Requires `output: "server"` (or `hybrid` with the SEO paths not prerendered) in `astro.config.mjs`.
@@ -52,7 +66,7 @@ Requires `output: "server"` (or `hybrid` with the SEO paths not prerendered) in 
 import { createSvelteKitSeoHandle } from "@commercengine/seo/sveltekit/server";
 import { seo } from "$lib/commerce-seo";
 
-export const handle = createSvelteKitSeoHandle(seo);
+export const handle = createSvelteKitSeoHandle(seo, { robots: true, sitemap: true });
 ```
 
 Compose with `sequence()` if you already have a handle.
@@ -66,7 +80,7 @@ import { createTanStackStartSeoMiddleware } from "@commercengine/seo/tanstack-st
 import { seo } from "@/lib/seo";
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [createTanStackStartSeoMiddleware(seo)],
+  requestMiddleware: [createTanStackStartSeoMiddleware(seo, { robots: true, sitemap: true })],
 }));
 ```
 
@@ -74,18 +88,43 @@ TanStack route files cannot express these paths anyway: route params must be val
 
 ### What the handler serves
 
+Always, with no options at all:
+
 ```
-/robots.txt
-/sitemap.xml                     (+ /sitemap/{n}.xml shards past 50k URLs)
 /llms.txt
 /sitemap.md
-/product/{slug}.md
-/category/{slug}.md
-/search.md?q=...
-/product/{slug}   with Accept: text/markdown   → the mirror, Vary: Accept
+{productBase}/{slug}.md
+{categoryBase}/{slug}.md
+{searchPath}.md?q=...
+{productBase}/{slug}   with Accept: text/markdown   → the mirror, Vary: Accept
 ```
 
+Defaults: `productBase = "/products"`, `categoryBase = "/category"`, `searchPath = "/search"`. The
+handler derives its matching from the same `routes` you gave `createCommerceSeo`, so it always
+matches the URLs the rest of the package advertises — there is nothing to keep in sync separately.
+
+Note the naming: in a `routes` object the search key is `search`, not `searchPath`. `searchPath` is
+the per-handler override, alongside `productPath` and `categoryPath`, which take regexes rather than
+base segments.
+
+Only when explicitly enabled:
+
+```
+/robots.txt                      requires robots: true
+/sitemap.xml                     requires sitemap: true
+/sitemap/{n}.xml                 requires sitemap: true (shards past 50k URLs)
+```
+
+If you copy a recipe without those options and then `curl /robots.txt`, you get whatever your app
+would have served — usually a 404 — and nothing anywhere reports a misconfiguration. The recipes
+above pass both, which is also what the server-mode Commerce Engine starters do. Static starters
+pass no request-handler flags at all: their prebuild path emits `robots.txt` and the XML sitemap
+through the static generator instead, where both are on by default.
+
 `HEAD` returns headers with an empty body. Non-`GET`/`HEAD` falls through to your app. A malformed percent-escape returns 400; an unknown `.md` path falls through rather than 404ing, so it cannot shadow your routes.
+
+The sitemap index and its shards are enabled by the same flag on purpose: a sitemap index is only
+valid if every shard it advertises resolves, so they cannot be turned on independently.
 
 ---
 
