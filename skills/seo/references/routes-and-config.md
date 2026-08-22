@@ -98,16 +98,53 @@ Each hook runs **once** per head build. Returning `{}` (or omitting a field) kee
 
 ## Indexability & Environment
 
+`indexable` overrides detection. It is not a flag that defaults to `false`:
+
+```typescript
+// createCommerceSeo, effectively:
+const indexable = config.indexable ?? isProductionDeployment(config.deployment);
+```
+
 ```typescript
 indexable: true       // force index
 indexable: false      // force noindex
-// omitted           → detectDeploymentEnvironment()
+// omitted           → isProductionDeployment(deployment)
 ```
 
-Detection reads the platform environment (Vercel, Netlify, and friends) and treats preview deployments as non-production. Two consequences worth internalising:
+`detectDeploymentEnvironment()` returns `"production" | "preview" | "development" | "unknown"`, and only `"production"` is indexable:
 
-- **Unset means `noindex`.** Safe by default; a live site needs the flag set.
-- **A local build is not a production deployment.** The prebuild script should pass `indexable: true` explicitly, or every generated `robots.txt` will disallow everything.
+| Platform | Signal | Production when |
+|----------|--------|-----------------|
+| Vercel | `VERCEL_ENV` | `production` |
+| Netlify | `CONTEXT` (with `NETLIFY`) | `production` |
+| Cloudflare Pages / Workers | `CF_PAGES_BRANCH` / `WORKERS_CI_BRANCH` | branch ∈ `productionBranches` (default `["main", "master"]`) |
+| fallback | `NODE_ENV` | `production` |
+| no signal | — | `unknown` → **not** indexable |
+
+Three consequences worth internalising:
+
+- **A recognised production deployment is indexable with no flag set.** `indexable: true` is an override, not a requirement for going live.
+- **Unknown is conservative on purpose.** No platform signal is more likely to mean a preview or a local build than the canonical site, and the costs are asymmetric — a missing `noindex` competes with your real store, an unnecessary one is a one-line fix. On an unrecognised host, say so explicitly.
+- **Cloudflare publishes only a branch name**, so if your production branch is not `main`/`master`, configure it or production serves the preview policy:
+
+  ```typescript
+  createCommerceSeo({ ...commerceSeo, storefront, deployment: { productionBranches: ["release"] } });
+  ```
+
+### A non-indexable deployment is still crawlable
+
+This surprises people, so it is worth stating plainly. When `indexable` resolves false the generated `robots.txt` is:
+
+```
+User-agent: *
+Allow: /
+```
+
+— no sitemap advertised, and `noindex, nofollow` on every page, `X-Robots-Tag` on every served document, and a `_headers` file for static output. It does **not** disallow anything.
+
+`Disallow: /` would look safer and is actively counterproductive: it stops the crawl without deindexing, and a crawler that never fetches the page never reads the `noindex`, so a linked URL can still be indexed with no content. Deindexing requires the crawler to fetch and read the directive. Do not add `Disallow: /` to a preview.
+
+Indexability is resolved **once** per `createCommerceSeo` and exposed as `seo.indexable`; `robots.txt` and the page directives both derive from it, so they cannot disagree. There is deliberately no per-call override.
 
 `applyIndexability` is exported if you need the same decision elsewhere.
 
