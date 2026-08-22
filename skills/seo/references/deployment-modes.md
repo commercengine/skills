@@ -136,7 +136,9 @@ const seo = createCommerceSeo({
   }),
   site: { name: "Acme", url: "https://acme.example", brandName: "Acme" },
   routes: { productBase: "/product", categoryBase: "/category" },
-  // A local build is not a production deployment, so detection would mark everything noindex.
+  // Explicit because a local build carries no platform signal — detection returns "unknown"
+  // and the assets would be generated non-indexable. On CI where VERCEL_ENV/CONTEXT is
+  // present, detection gets this right on its own and this line is unnecessary.
   indexable: true,
 });
 

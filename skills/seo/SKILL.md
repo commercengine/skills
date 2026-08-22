@@ -135,13 +135,30 @@ In server mode the same paths are also content-negotiated: a request for `/produ
 
 ## Indexability
 
-`indexable` is unset by default, which means **every page emits `noindex`**. That is deliberate — a staging or preview deployment should never be indexed. Set it explicitly when a real domain goes live:
+`indexable` **overrides** deployment detection; it does not default to `false`.
 
 ```typescript
-createCommerceSeo({ ...commerceSeo, storefront, indexable: true });
+const indexable = config.indexable ?? isProductionDeployment(config.deployment);
 ```
 
-Omit it and the package falls back to `detectDeploymentEnvironment()`, which treats Vercel/Netlify preview deployments as non-production. If pages are unexpectedly `noindex` in production, this is why.
+- `indexable: true` — force indexing.
+- `indexable: false` — force `noindex`.
+- **omitted** — detect the deployment. A recognised production deployment is indexable; preview, development and unknown are not.
+
+So a real production deploy on Vercel, Netlify or Cloudflare — or any host where `NODE_ENV=production` — is indexable *without* setting the flag. You do not need `indexable: true` in production as a matter of course.
+
+| Platform | Signal | Production when |
+|----------|--------|-----------------|
+| Vercel | `VERCEL_ENV` | `production` |
+| Netlify | `CONTEXT` | `production` |
+| Cloudflare | branch name | branch ∈ `productionBranches` (default `main`, `master`) |
+| anything else | `NODE_ENV` | `production` |
+
+`NODE_ENV` alone cannot answer this, which is why detection exists: Vercel, Netlify and Cloudflare all build **preview** deployments with `NODE_ENV=production`. Trusting it would publish an indexable copy of every branch, competing with the real storefront.
+
+**Unknown is treated as non-indexable on purpose.** An unrecognised host is more likely to be a preview or a local build than the canonical production site, and the cost is asymmetric: a missing `noindex` competes with your real store in search results, while an unnecessary one is fixed by setting the flag. On a platform outside the table, set `indexable` explicitly.
+
+> A non-indexable deployment stays **crawlable** — its `robots.txt` is `User-agent: * / Allow: /` with no sitemap, and every page carries `noindex`. That combination is deliberate: `Disallow: /` stops the crawl, and a crawler that never fetches the page never reads the `noindex`, so the URL can still be indexed without content. Do not "harden" a preview by adding `Disallow: /`.
 
 ## Common Pitfalls
 
