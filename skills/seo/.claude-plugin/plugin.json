@@ -1,7 +1,7 @@
 {
   "name": "ce-seo",
-  "description": "SEO and agent-readable content for Commerce Engine storefronts using @commercengine/seo. Head metadata, JSON-LD (Product/ProductGroup with variesBy), canonical URLs, robots.txt, sitemaps, llms.txt, and Markdown mirrors across React SPA, Next.js, Astro, SvelteKit, and TanStack Start.",
-  "version": "1.0.0",
+  "description": "SEO and agent-readable content for Commerce Engine storefronts using @commercengine/seo. Route records for CMS-owned URLs, head metadata, JSON-LD (Product/ProductGroup with variesBy), canonical URLs, robots.txt, sitemaps, llms.txt, and Markdown mirrors across React SPA, Next.js, Astro, SvelteKit, and TanStack Start.",
+  "version": "1.1.0",
   "author": {
     "name": "Commerce Engine",
     "email": "support@commercengine.io"

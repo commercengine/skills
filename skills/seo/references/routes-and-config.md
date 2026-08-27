@@ -90,6 +90,11 @@ Return `null` to **omit** an entity entirely. Omission is honoured everywhere at
 
 Both may be async, so a CMS lookup is fine.
 
+> **If a CMS owns the URLs, stop here and read `references/cms-routes.md` instead.** The resolver
+> shapes below answer *"what is this product's URL?"* — one product, one URL. They cannot express a
+> product with six landing pages, which is the case a CMS-fronted storefront usually has, and using
+> them there silently drops five of the six from every sitemap. Declare route records instead.
+
 ### Inbound: mapping public slugs back to CE
 
 If your public URLs use CMS slugs rather than Commerce Engine slugs, the outbound function alone is not enough — the `.md` handler needs to resolve an incoming public slug back to something the catalog understands:

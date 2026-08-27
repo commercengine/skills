@@ -1,10 +1,10 @@
 ---
 name: ce-ai
-description: WebMCP agent tools for Commerce Engine storefronts using @commercengine/ai. Exposes catalog search, product/variant lookup, real cart mutations, navigation, and session state to browser AI agents via document.modelContext, across React SPA, Next.js, Astro, SvelteKit, and TanStack Start.
+description: WebMCP agent tools for Commerce Engine storefronts using @commercengine/ai. Exposes catalog search, product/variant lookup, real cart mutations, navigation, and session state to browser AI agents via document.modelContext, across React SPA, Next.js, Astro, SvelteKit, and TanStack Start. Covers registration lifecycle and cancellation, capability gating, and resolving CMS slugs in both directions.
 license: MIT
 metadata:
   author: commercengine
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
@@ -59,13 +59,16 @@ const registration = await registerCommerceWebMcp({
     : undefined,
 });
 
-// Aborting unregisters everything this call installed.
-registration?.abort();
+// Keep the controller for teardown. Calling it unregisters every tool this call installed —
+// so call it from a cleanup function, not here:
+// registration?.abort();
 ```
 
 Returns `null` — never throws — when the browser has no model context. Framework-specific mount points are in `references/registration.md`.
 
 > `routes` and `site` come from `defineCommerceSeoConfig`. Sharing one declaration with `@commercengine/seo` means a crawler and an agent can never be told different URLs for the same product.
+
+`siteUrl` is validated where it is configured, not carried into an agent's results: an `ftp://` scheme, embedded credentials, or a sub-path throws a `RangeError` at construction. An agent is the surface where a bad origin does the most damage, because every URL a tool returns is built from it and handed straight to a model.
 
 ## References
 
@@ -89,7 +92,21 @@ Tools register **only** when you supply the capability behind them. A storefront
 | `navigation.ordersUrl` | `manage_orders` |
 | `shopContent` | `search_shop_policies_and_faqs` |
 
-A typical storefront with hosted checkout registers **12** tools. Pass `session: null` to register no cart tools at all.
+Counted against the published package, so you can predict the number before you look:
+
+| Configuration | Tools |
+|---|---|
+| `session: null`, nothing else | 4 |
+| catalog + session *(the default)* | 9 |
+| + hosted checkout | 11 |
+| + `checkout.openLogin` | 12 |
+| + `navigation` | 13 |
+| + `navigation.ordersUrl` | 14 |
+| + `shopContent` | 15 |
+
+The session tools come from the storefront's own browser session, found via `clientStorefront()` or
+`session()`. A storefront exposing neither registers the four catalog tools and nothing else — which
+looks identical to a bug, so check the accessor name first when cart tools are missing.
 
 This is why an agent reporting "login isn't available on this site" is usually correct and intentional — the checkout build exposed no `openLogin`.
 
@@ -108,6 +125,79 @@ Three behaviours the package handles for you:
 - **Promotional free items.** Lines auto-added by an active promotion are reported `removable: false` and cannot be removed. `set_cart_item_quantity` operates on the *paid* quantity, leaving the free allocation alone.
 - **Ordering rules.** `min_order_quantity`, `max_order_quantity`, and increment steps are validated before the call, and the constraints are stated in the tool description so the agent can get it right first time rather than by trial and error.
 - **Stale checkout.** The next add or create automatically resets a stale checkout session.
+
+## Two Signals, Doing Different Jobs
+
+Claiming a tool set is **not atomic** — it is a sequence of awaited `registerTool` calls. Two
+overlapping registrations against one model context would race for the same names and one would throw
+`InvalidStateError: Duplicate tool name`. React Strict Mode makes this the ordinary case, not an edge
+one: it mounts, cleans up and mounts again back-to-back on every dev mount, and both passes dispatch
+their first tool before either resumes, so cleanup alone cannot break the tie.
+
+Registrations against one context are therefore **serialized** — a second call waits for the first to
+settle, including any rollback.
+
+| Signal | Cancels | Why the other cannot cover it |
+|---|---|---|
+| the returned controller | tools that **did** register | it does not exist until the promise resolves |
+| `config.signal` | a registration still **in progress**, including the `registerTool` currently awaited | the controller cannot reach a pass that has not finished |
+
+```typescript
+import { CommerceWebMcpAbortError, registerCommerceWebMcp } from "@commercengine/ai/webmcp";
+
+useEffect(() => {
+  const controller = new AbortController();
+  let registration: { abort: () => void } | null = null;
+  void registerCommerceWebMcp({ ...config, signal: controller.signal })
+    .then((result) => { registration = result; })
+    .catch((error) => { if (!(error instanceof CommerceWebMcpAbortError)) throw error; });
+  return () => { controller.abort(); registration?.abort(); };
+}, []);
+```
+
+Cancellation rejects with `CommerceWebMcpAbortError`, which callers are expected to swallow — it
+means "you asked for this". Without `config.signal`, cleanup can run before the controller exists and
+the stale pass stays live after its component has gone away.
+
+## Routes: The Agent Resolves Both Directions
+
+`routes.product` runs **in the browser**, during tool execution. A resolver that performs a CMS lookup
+would need that credential on the client, so the portable shape is a pure function over route data
+the browser already has.
+
+```typescript
+import { createCommerceRouteManifest } from "@commercengine/seo/routes";
+const manifest = createCommerceRouteManifest(await loadRouteRecords());
+
+export const routes = {
+  // OUTBOUND: entity → URL. Never guess. `null` means "no public page".
+  product: (input) => manifest.productPath(input),
+
+  // INBOUND: public slug → CE identifier. The `?? publicSlug` tail is a deliberate
+  // choice, valid ONLY because this storefront also answers to catalog slugs — it
+  // keeps a page published since the last refresh working when the two agree.
+  // Return null instead where CMS slugs are the only accepted form.
+  resolveProductRoute: (publicSlug) => manifest.resolveProduct(publicSlug)?.productId ?? publicSlug,
+};
+```
+
+`resolveProductRoute` matters as much as `product`. An agent reads a CMS page slug off the page and
+calls `get_product("knee-pain-relief-oil")` — without the inbound mapping that goes straight to a
+catalog which has never heard of it.
+
+**The two directions have opposite fallback rules, and the distinction is easy to lose:**
+
+| Direction | On no match | Why |
+|---|---|---|
+| Outbound `productPath()` | return `null`, render a non-link | a guessed `/products/${ce_slug}` is a shopper-facing 404 |
+| Inbound `resolveProductRoute()` | `?? publicSlug` **only** if catalog slugs are also valid public URLs; otherwise `null` | the cost is one failed lookup, and the fallback rescues a page published since the last cache refresh |
+
+Returning `null` from an inbound resolver fails the tool with `route_not_found` before any catalog
+request, rather than passing an unmapped slug to a catalog that has never heard of it.
+
+Separately: **do not ship a 100,000-product manifest to the browser** merely to resolve a search page.
+This package performs no route-data transport and imposes no API, batching or cache policy — at that
+size, back the same hooks with a storefront-owned point cache that loads only the result set.
 
 ## Diagnostics
 
@@ -148,6 +238,10 @@ Everything draft-specific is confined to one module, so churn is a change to one
 | HIGH | Assuming a session merge across devices | Cart merge on login is guaranteed only while the token survives — same browser session. A different device or browser will not merge. |
 | MEDIUM | No diagnostics in dev | Add them. This is the difference between a five-second check and an unanswerable question. |
 | MEDIUM | Re-serializing tool output | `execute` returns a **value**; the user agent serializes it. Returning JSON text hands the agent a string to re-parse. |
+| CRITICAL | Aborting in the quick start | `registration?.abort()` immediately after registering unregisters everything you just installed. It belongs in a cleanup function. |
+| HIGH | `InvalidStateError: Duplicate tool name` in dev | Two overlapping registrations. Pass `config.signal` so the stale pass is cancelled rather than left live. See "Two Signals". |
+| HIGH | Agent gets a 404 for a product that exists | The CMS slug reached the catalog untranslated. Supply `resolveProductRoute`. |
+| MEDIUM | Cart tools missing with no error | The storefront exposes no `clientStorefront()` / `session()` accessor, so `session` resolved to `null`. Four catalog tools register and nothing complains. |
 
 ## See Also
 

@@ -60,6 +60,27 @@ Before deleting, check what you are actually removing. `AggregateRating` *is* in
 
 Framework routers give a concrete route priority over a catch-all, so `/product/[slug]` claims `/product/shoe.md`. SvelteKit fails the build outright on the collision; the others silently serve HTML. Static builds must use the prebuild script.
 
+### Product cards 404 while the crawler is fine
+
+**Symptom:** every SEO surface passes review; clicking a product card on the storefront 404s.
+
+Two URL spaces. The crawler and the agent resolve CMS slugs through the package, while product cards
+build `/products/${item.product_slug}` by hand — and the CE slug is precisely the one the route does
+not render. It survives review because nothing in the SEO output is wrong.
+
+Resolve card hrefs through the same records (`references/cms-routes.md`), and render a **non-link**
+when resolution returns `null`. A fallback to the catalog slug reintroduces the bug it was meant to
+fix.
+
+### Every landing page claims the same canonical
+
+**Symptom:** six landing pages, one canonical URL, five pages de-indexed as duplicates.
+
+Rendering without a hint answers with the **primary** record, which is correct for a link and wrong
+for a render. Pass the hint — `seo.productPage(product, { path, slug })` — so each page is canonical
+to itself. `generateMetadata` and the page body are separate invocations and both need it; wrap the
+CMS read in `cache()` so they share one fetch.
+
 ### Registration code that never runs
 
 **Symptom:** a feature works on some apps and is silently absent on others; typecheck, build, and lint all pass.

@@ -181,8 +181,10 @@ const seo = createCommerceSeo({
   indexable: true,
 });
 
-const assets = await writeCommerceSeoAssets(seo, { outDir: "public" }); // "static" for SvelteKit
-console.log(`[seo] wrote ${assets.length} assets`);
+// Returns the NUMBER of files written, not an array — it streams one bounded product
+// batch at a time so a large catalog never retains every generated Markdown body.
+const written = await writeCommerceSeoAssets(seo, { outDir: "public" }); // "static" for SvelteKit
+console.log(`[seo] wrote ${written} assets`);
 ```
 
 ```json
@@ -190,6 +192,12 @@ console.log(`[seo] wrote ${assets.length} assets`);
 ```
 
 `outDir` is the directory the framework publishes verbatim: `public/` for Vite, Astro, and Next; `static/` for SvelteKit. `writeCommerceSeoAssets` refuses to write outside it.
+
+**Writes are incremental, not atomic.** Files are written as they are generated, so a failure part
+way through leaves the earlier ones on disk. Where a deploy must be all-or-nothing, write to a fresh
+staging directory and publish it only after the call returns. `createCommerceSeoStaticAssets()` still
+returns an in-memory array for framework adapters that need one, and
+`iterateCommerceSeoStaticAssets()` yields assets one at a time for custom build integrations.
 
 ### Gitignore the output
 

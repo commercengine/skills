@@ -148,8 +148,8 @@
     },
     {
       "name": "ce-seo",
-      "description": "Commerce Engine SEO - head metadata, JSON-LD (Product/ProductGroup with variesBy), canonical URLs, robots.txt, sitemaps, llms.txt, and Markdown mirrors for React SPA, Next.js, Astro, SvelteKit, and TanStack Start",
-      "version": "1.0.0",
+      "description": "Commerce Engine SEO - head metadata, JSON-LD (Product/ProductGroup with variesBy), canonical URLs, robots.txt, sitemaps, llms.txt, Markdown mirrors, and CMS-owned route records for React SPA, Next.js, Astro, SvelteKit, and TanStack Start",
+      "version": "1.1.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -163,8 +163,8 @@
     },
     {
       "name": "ce-ai",
-      "description": "Commerce Engine agent tools - WebMCP tools exposing catalog search, product/variant lookup, real cart mutations, navigation, and session state to browser AI agents",
-      "version": "1.0.0",
+      "description": "Commerce Engine agent tools - WebMCP tools exposing catalog search, product/variant lookup, real cart mutations, navigation, and session state to browser AI agents, with registration lifecycle and CMS slug resolution",
+      "version": "1.1.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
