@@ -2,7 +2,7 @@
 
 ## How It Works
 
-The `@commercengine/storefront` package handles token storage automatically for Next.js and TanStack Start via the `createSSRFactory` abstraction from `@commercengine/ssr-utils`.
+The `@commercengine/storefront` package handles token storage automatically for Next.js, TanStack Start, Astro and SvelteKit via the `createSSRFactory` abstraction from `@commercengine/ssr-utils`.
 
 **Three-layer model:**
 
@@ -39,6 +39,9 @@ The client and server storages share the same cookie format so hydration and nav
    serverStorefront() — from @commercengine/storefront/tanstack-start/server
    → Reads cookies via getCookie() from @tanstack/react-start/server
    → Fresh per call (each server function invocation)
+
+   Astro / SvelteKit: serverStorefront(cookies) — from the /astro/server or /sveltekit/server entry
+   → Reads and writes the request's cookies object passed at the call site
 
 5. Client-side session
    storefront.clientStorefront()
@@ -86,7 +89,7 @@ After that eager bootstrap is in place, ordinary session-aware SDK calls such as
 
 ## Configuration
 
-Both `createNextjsStorefront()` and `createTanStackStartStorefront()` accept `tokenStorageOptions`:
+`createNextjsStorefront()`, `createTanStackStartStorefront()`, `createAstroStorefront()` and `createSvelteKitStorefront()` (and their server counterparts) all accept `tokenStorageOptions`:
 
 | Property | Default | Notes |
 |----------|---------|-------|
@@ -101,7 +104,7 @@ The client and server cookie configurations are automatically aligned — you do
 
 ## Security Notes
 
-- `NEXT_PUBLIC_API_KEY` / `VITE_API_KEY` are safe for client-side storefront use — they are scoped to public storefront operations.
+- `NEXT_PUBLIC_API_KEY` / `VITE_API_KEY` / `PUBLIC_API_KEY` are safe for client-side storefront use — they are scoped to public storefront operations.
 - Public reads should use `publicStorefront()` instead of creating anonymous sessions unnecessarily.
 - Token refresh is automatic in managed session mode.
 - Logout should clear session tokens so checkout or account UI does not hold stale state.

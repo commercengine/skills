@@ -9,6 +9,7 @@ Use this when implementing PDP option UI that behaves consistently across varian
 - Non-variant products can still render option-style UI from `attributes` for brand consistency.
 - Add to Cart is gated by valid variant resolution only for `has_variant: true`.
 - Option group rendering is driven by `variant_options` order and values.
+- Price comes from the resolved variant for `has_variant: true` (product-level `pricing` is `null` there), and any `pricing` can be `null` when none is configured. A selection without pricing is not addable.
 
 ## TypeScript Reference
 
@@ -17,6 +18,7 @@ import type {
   AssociatedOption,
   Product,
   ProductAttribute,
+  ProductPricing,
   Variant,
   VariantOption,
 } from "@commercengine/storefront";
@@ -232,6 +234,59 @@ export function getRenderableAttributes(
   return product.attributes.filter((attr) => !renderedOptionKeys.has(attr.key));
 }
 
+// The variant the current URL selection resolves to (all option keys matched), or null.
+export function getResolvedVariant(
+  product: Product,
+  searchParams: URLSearchParams
+): Variant | null {
+  if (!product.has_variant) return null;
+
+  const optionKeys = getOptionKeys(product);
+  if (optionKeys.length === 0) {
+    const variantId = searchParams.get("variant");
+    return (
+      product.variants.find((variant) => variant.id === variantId) ?? getDefaultVariant(product)
+    );
+  }
+
+  return findVariantBySelection(
+    product.variants,
+    optionKeys,
+    getSelectedOptionsFromSearchParams(searchParams, optionKeys)
+  );
+}
+
+// `pricing` is null on a product with variants (pricing is per variant) and on any product or
+// variant with no pricing configured. Until the selection resolves, show the default variant's.
+export function getDisplayPricing(
+  product: Product,
+  resolvedVariant: Variant | null
+): ProductPricing | null {
+  if (!product.has_variant) return product.pricing;
+  return (resolvedVariant ?? getDefaultVariant(product))?.pricing ?? null;
+}
+
+// Quantity stepper rules live on pricing; the API defaults min and step to 1.
+export function getQuantityRules(pricing: ProductPricing | null) {
+  return {
+    min: pricing?.min_order_quantity ?? 1,
+    step: pricing?.incremental_quantity ?? 1,
+    max: pricing?.max_order_quantity ?? null,
+  };
+}
+
+export function canAddToCart(product: Product, resolvedVariant: Variant | null): boolean {
+  if (!product.has_variant) {
+    return product.pricing !== null && isPurchasable(product.stock_available, product.backorder);
+  }
+
+  return (
+    resolvedVariant !== null &&
+    resolvedVariant.pricing !== null &&
+    isPurchasable(resolvedVariant.stock_available, resolvedVariant.backorder)
+  );
+}
+
 // URL canonical key rule
 export const optionQueryParamKey = (optionKey: string) => optionKey;
 
@@ -336,3 +391,10 @@ export function syncVariantUrlState(
 - Derived: `variant` query param is optional convenience.
 - Backfill: if URL has valid `variant` but missing options, fill only missing option params from that variant.
 - Cleanup: if options are invalid/incomplete and no backfill is possible, remove `variant`.
+
+## Pricing Rules
+
+- Never read `product.pricing.x` unguarded: it is `null` whenever `has_variant` is `true`, and on any product or variant with no pricing configured.
+- Display: the resolved variant's `pricing`, else the default variant's while the selection is incomplete. When it is `null`, render no price (never `0`).
+- Add to Cart: needs a resolved variant (variant products), stock (`stock_available` or `backorder`) and non-null `pricing`.
+- Quantity: `min_order_quantity`, `incremental_quantity` and `max_order_quantity` come from the same `pricing`.

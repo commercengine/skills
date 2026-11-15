@@ -26,7 +26,7 @@ skill({ name: 'ce' })
 ### Step 3: Identify task type from user request
 
 Analyze $ARGUMENTS to determine:
-- **Task type**: setup, auth, catalog, cart/checkout, orders, webhooks, SSR/meta-framework patterns, custom SSR bindings, SEO, AI agent tools
+- **Task type**: setup, auth, catalog, cart/checkout, orders, analytics, webhooks, SSR/meta-framework patterns, custom SSR bindings, SEO, AI agent tools
 - **Platform**: Next.js, TanStack Start, React, Vue, Svelte, Solid, Node.js, Vanilla JS
 
 Use decision trees in SKILL.md to select correct skill.
@@ -42,6 +42,7 @@ Based on task type, load the appropriate skill:
 | Products / catalog | `catalog/` | SKILL.md |
 | Cart / checkout | `cart-checkout/` | SKILL.md + relevant reference |
 | Orders / returns | `orders/` | SKILL.md |
+| Analytics / tracking | `analytics/` | SKILL.md + relevant reference |
 | Webhooks | `webhooks/` | SKILL.md |
 | Next.js / TanStack Start | `ssr-patterns/` | SKILL.md + relevant reference |
 | Custom SSR bindings | `ssr/` | SKILL.md |
@@ -67,8 +68,8 @@ https://llm-docs.commercengine.io/storefront/schemas/{SchemaName}.md
 # Browse all webhooks
 https://llm-docs.commercengine.io/webhooks/index.md
 
-# Look up a specific webhook
-https://llm-docs.commercengine.io/storefront/webhooks/{event-name}.md
+# Look up a specific webhook (e.g., order.created)
+https://llm-docs.commercengine.io/events/webhooks/{event-name}.md
 ```
 
 **Option B — Use `curl` with custom header** (via Bash tool):

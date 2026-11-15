@@ -1,6 +1,6 @@
 ---
 name: ce
-description: Commerce Engine router. Use when the user asks about building a storefront, setting up the SDK, auth, products, cart, checkout, orders, webhooks, SSR, SEO, AI agent tools, Next.js, or TanStack Start e-commerce patterns.
+description: Commerce Engine router. Use when the user asks about building a storefront, setting up the SDK, auth, products, cart, checkout, orders, analytics tracking, webhooks, SSR, SEO, AI agent tools, Next.js, or TanStack Start e-commerce patterns.
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
@@ -18,6 +18,8 @@ All frameworks install `@commercengine/storefront` — a unified package with su
 - **TanStack Start** (`@commercengine/storefront/tanstack-start`): `createTanStackStartStorefront(...)` → `storefront.publicStorefront()` / `storefront.clientStorefront()` + server entry for `serverStorefront()`
 
 Core principle: **public reads** use the public accessor (API-key-backed, build-safe). **Live session flows** (auth, cart, orders) use the session/client/server accessor.
+
+Every SDK call returns `{ data, error }`, where `data` is the API response's `content`. Cart, order and wishlist mutations also return `events`: the analytics events the request produced, each with a server-issued `event_id`. Forward them with `@commercengine/analytics` (`ce-analytics`) so browser and server copies of an event deduplicate.
 
 ## By Task
 
@@ -44,8 +46,12 @@ Core principle: **public reads** use the public accessor (API-key-backed, build-
 - Order creation, order history, shipments, payments
 - Cancellation and returns
 
-**Webhooks & events** -> `ce-webhooks`
-- Event handling, signature verification, async processing
+**Analytics & tracking** -> `ce-analytics`
+- Segment-spec ecommerce events from SDK results with `@commercengine/analytics`
+- Deduplicating browser events against Commerce Engine's server-side copies via `events`
+
+**Webhooks** -> `ce-webhooks`
+- Webhook envelope and `X-CE-*` headers, signature verification, idempotent async processing
 
 **Next.js / TanStack Start / Astro / SvelteKit patterns** -> `ce-ssr-patterns`
 - `publicStorefront()` / `clientStorefront()` / `serverStorefront()`
@@ -104,7 +110,8 @@ User Request
     ├─ "Products" / "Categories" / "Search"          → ce-catalog
     ├─ "Cart" / "Checkout" / "Payments"              → ce-cart-checkout
     ├─ "Orders" / "Returns" / "Shipments"            → ce-orders
-    ├─ "Webhooks" / "Events" / "Sync"                → ce-webhooks
+    ├─ "Analytics" / "Tracking" / "Segment" / "Pixel" → ce-analytics
+    ├─ "Webhooks" / "Server events" / "Sync"         → ce-webhooks
     ├─ "Next.js" / "Server Actions"                  → ce-ssr-patterns (references/nextjs.md)
     ├─ "TanStack Start" / "Server functions"         → ce-ssr-patterns (references/tanstack-start.md)
     ├─ "Astro" / "Astro SSR"                         → ce-ssr-patterns (references/astro.md)
@@ -121,6 +128,7 @@ User Request
 - `/ce-catalog`
 - `/ce-cart-checkout`
 - `/ce-orders`
+- `/ce-analytics`
 - `/ce-webhooks`
 - `/ce-ssr-patterns`
 - `/ce-ssr`

@@ -5,14 +5,14 @@ license: MIT
 allowed-tools: Bash
 metadata:
   author: commercengine
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
 
 # Setting Up Commerce Engine
 
-This skill sets up the latest Commerce Engine SDK surface.
+This skill sets up the latest Commerce Engine SDK surface: `@commercengine/storefront` 0.2.0, which re-exports `@commercengine/storefront-sdk` 0.16.0.
 
 ## Current Mental Model
 
@@ -452,6 +452,29 @@ const { data: wishlist } = await sessionSdk.cart.getWishlist();
 
 Ordinary session-aware SDK methods such as `sdk.cart.getWishlist()`, `sdk.cart.addToWishlist()`, `sdk.cart.getUserCart()`, and `sdk.customer.listAddresses()` do not require a manual `ensureAccessToken()` call. The middleware and overloads handle session creation and ID resolution automatically. If your app wants eager bootstrap, call it once during startup instead of scattering `ensureAccessToken()` through feature code.
 
+## Result Shape
+
+Every SDK method resolves to `{ data, error, response }`. On success `data` is the response's `content` and `error` is `null`; on failure `data` is `null` and `error` is set. Check `error` before using `data`.
+
+Mutations that change a cart, an order or a wishlist also return `events`: the analytics events the request produced, each with a server-issued `event_id`.
+
+| Client | Methods that return `events` |
+|--------|------------------------------|
+| `sdk.cart` | `createCart`, `addDeleteCartItem`, `deleteCart`, `deleteUserCart`, `updateCartAddress`, `applyCoupon`, `removeCoupon`, `addToWishlist`, `removeFromWishlist` |
+| `sdk.order` | `createOrder`, `cancelOrder` |
+
+```typescript
+const { data, error, events } = await sessionSdk.cart.addDeleteCartItem(
+  { id: cartId },
+  { product_id: "product-id", variant_id: null, quantity: 1 }
+);
+
+if (error) throw error;
+// events → [{ event: "Product Added", event_id: "01J...", cart_id, product_id, variant_id, quantity }]
+```
+
+`events` is typed as `StorefrontResponseEvent[]`. It is empty on an error, or when the request produced no event (for example a reused cart). Other methods have no `events` in their result type. Code that builds these results itself (test doubles, wrappers typed with the method's return type) must include `events` (for example `events: []`).
+
 ## Session Helpers
 
 Most session SDK methods that need a `user_id` or `customer_id` have **parameterless overloads** that auto-resolve from the current session. You do not need to manually fetch IDs and pass them. For example:
@@ -470,9 +493,11 @@ const { data } = await sdk.cart.getUserCart({ user_id: "other_user_id" });
 **Methods with parameterless overloads** (auto-resolve `user_id` or `customer_id`):
 - **Cart**: `getUserCart()`, `deleteUserCart()`, `getWishlist()`, `addToWishlist()`, `removeFromWishlist()`
 - **Orders**: `listOrders()`
-- **Customer**: `listAddresses()`, `createAddress()`, `getAddress()`, `updateAddress()`, `deleteAddress()`, `getLoyaltyDetails()`, `listLoyaltyPointsActivity()`, `listCustomerReviews()`, `listSavedPaymentMethods()`, `listCustomerCards()`
+- **Customer**: `listAddresses()`, `createAddress()`, `getAddress()`, `updateAddress()`, `deleteAddress()`, `getLoyaltyDetails()`, `listLoyaltyPointsActivity()`, `getCreditBalance()`, `listCustomerReviews()`, `listSavedPaymentMethods()`, `listCustomerCards()`
 
-**Auth client methods still require explicit IDs** — `getUserDetails({ id })`, `updateUserDetails({ id })`, etc. Use `sdk.getUserId()` to get the current user's ID for these calls.
+`sdk.customer.getLoyaltyProgram()` reads the store's loyalty program (tiers, status) and takes no ID at all.
+
+**Auth client methods still require explicit IDs** — `getUserDetails({ id })`, `updateUserDetails({ id })`, `listUserAttributes({ id })`, `updateUserAttributes({ id }, body)`, etc. Use `sdk.getUserId()` to get the current user's ID for these calls.
 
 ### When You Still Need Session Helpers
 
@@ -523,11 +548,25 @@ const storefront = createStorefront({
 });
 ```
 
-Set `customer_group_id` after login from the user profile or auth response. Relevant catalog methods automatically receive it.
+Set `customer_group_id` after login from the session (`await sdk.getCustomerGroupId()`) or the user's `customer_group?.id` (`customer_group` is optional on `User`). Relevant catalog methods automatically receive it.
 
 ## Analytics
 
-Analytics are server-side and automated. Commerce Engine collects e-commerce events per the Segment spec. Merchants route these events into Segment, Rudderstack, or similar tools via Admin integrations. Storefront code does not need to wire analytics manually.
+Commerce Engine sends e-commerce events server-side per the Segment spec. Merchants route these events into Segment, RudderStack, or similar tools via Admin integrations. Storefront code does not need to send anything for these server-side events to arrive.
+
+The mutations listed in [Result Shape](#result-shape) return the events they produced in `events`, each with the `event_id` of the server's own copy. If the storefront also tracks in the browser (Segment analytics.js, RudderStack JS, pixels), map SDK results with `@commercengine/analytics` and pass `events` through, so the browser copy carries the same `event_id` and the two copies deduplicate. Do not derive or invent event ids. See `analytics/`.
+
+## Upgrading to storefront-sdk 0.16
+
+Requests are unchanged; the breaking changes are to result types and type exports. The full list ships in the package as `node_modules/@commercengine/storefront-sdk/MIGRATION.md`. The ones most likely to need a change:
+
+- Event-returning mutations (see [Result Shape](#result-shape)) are typed `ApiResult<T, StorefrontResponseEvent>`: hand-built results need `events`.
+- `pricing` is nullable on `Product`, `ProductDetail`, `Variant`, `VariantDetail` and `Item`, and `Item.product_slug`, `variant_slug`, `images` and `attributes` are optional (see `catalog/`).
+- `CartItem.slug` and `OrderItem.slug` are removed: use `product_slug` (nullable).
+- `User.business`, `customer_group` and `customer_id` are optional; `Business.metadata` is removed in favor of `User.metadata` (see `auth/`).
+- Renamed types: `Coupon` → `AvailableCoupon`, `Promotion` → `AvailablePromotion`, `FreeShipingCouponPromotion` → `FreeShippingCouponPromotion`.
+- POS types (`Pos*` and related) are no longer exported: use `@commercengine/pos`. `TrackAnalyticsEventBody`, `TrackAnalyticsEventResponse` and `AnalyticsEventInput` are removed with `POST /analytics/track`: use `events` instead.
+- New order, payment and refund status values: a `switch` that covers every value needs them.
 
 ## Common Pitfalls
 
@@ -536,8 +575,10 @@ Analytics are server-side and automated. Commerce Engine collects e-commerce eve
 | HIGH | Using `public()` for cart/auth/customer/order flows | Use `session()` for any live user or anonymous session work |
 | HIGH | Using `CookieTokenStorage` as SSR server storage | Use `ServerTokenStorage` from `@commercengine/ssr-utils`, or use the built-in wrappers for Next.js / TanStack Start |
 | HIGH | Skipping `StorefrontBootstrap` in SSR apps | Mount a client component calling `storefront.bootstrap()` once in the root layout |
+| HIGH | Browser analytics events sent without the server's `event_id` | Pass the mutation's `events` to `@commercengine/analytics` so browser and server copies deduplicate (see `analytics/`) |
 | MEDIUM | Bootstrapping anonymous auth in build/prerender code | Use `public()` instead |
 | MEDIUM | Duplicating config across public and session clients | Prefer one `createStorefront(...)` factory |
+| MEDIUM | Test doubles or wrappers for cart/order/wishlist mutations without `events` | Include `events: []` in hand-built results of the methods in [Result Shape](#result-shape) |
 
 ## See Also
 
@@ -545,6 +586,7 @@ Analytics are server-side and automated. Commerce Engine collects e-commerce eve
 - `ssr/` - Custom SSR bindings with `@commercengine/ssr-utils` (Nuxt and other unsupported frameworks)
 - `auth/` - Authentication flows
 - `cart-checkout/` - Hosted Checkout sync patterns
+- `analytics/` - Browser tracking with `@commercengine/analytics`, deduplicated against server events
 
 ## Documentation
 

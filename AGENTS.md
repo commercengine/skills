@@ -17,6 +17,7 @@ skills/
 │   ├── catalog/              # Products, variants & categories
 │   ├── cart-checkout/        # Cart, checkout & payments
 │   ├── orders/               # Order management & returns
+│   ├── analytics/            # Analytics events & server-event deduplication
 │   ├── webhooks/             # Webhook events & syncing
 │   ├── ssr-patterns/         # Next.js, TanStack Start, Astro & SvelteKit SSR patterns
 │   ├── ssr/                  # Custom SSR bindings (Nuxt and other unsupported frameworks)
@@ -37,7 +38,8 @@ User Request
     ├─ "Products" / "Categories" / "Search"  → catalog/
     ├─ "Cart" / "Checkout" / "Payments"      → cart-checkout/
     ├─ "Orders" / "Returns" / "Shipments"    → orders/
-    ├─ "Webhooks" / "Events" / "Sync"                → webhooks/
+    ├─ "Analytics" / "Tracking" / "Segment"  → analytics/
+    ├─ "Webhooks" / "Server events" / "Sync" → webhooks/
     ├─ "Next.js" / "TanStack Start" / "Astro" / "SvelteKit" / "Server Actions" → ssr-patterns/
     ├─ "SSR" / "Cookies" / "Custom binding" (Nuxt, etc.)                     → ssr/
     ├─ "SEO" / "Sitemap" / "JSON-LD" / "llms.txt"                            → seo/
@@ -109,7 +111,7 @@ Use these levels to prioritize guidance:
 ### SDK Response Pattern
 
 ```typescript
-// Every SDK call returns { data, error }
+// Every SDK call returns { data, error }; data is the response's `content`
 const { data, error } = await sdk.catalog.listProducts();
 
 if (error) {
@@ -117,6 +119,14 @@ if (error) {
 } else {
   console.log(data.products);
 }
+
+// Cart, order and wishlist mutations also return `events`: the analytics
+// events the request produced, each with a server-issued `event_id`
+// (empty on error). Forward them with @commercengine/analytics — see analytics/.
+const { data: added, events } = await sdk.cart.addDeleteCartItem(
+  { id: cartId },
+  { product_id, variant_id: null, quantity: 1 },
+);
 ```
 
 ### Token Storage Selection

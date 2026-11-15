@@ -4,7 +4,7 @@ description: SEO and agent-readable content for Commerce Engine storefronts usin
 license: MIT
 metadata:
   author: commercengine
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
@@ -244,12 +244,14 @@ So a real production deploy on Vercel, Netlify or Cloudflare — or any host whe
 | CRITICAL | Two product schemas on one page | The package emits `Product`/`ProductGroup`. Delete any hand-rolled product JSON-LD — keeping both describes the same item twice. |
 | HIGH | `BreadcrumbList` missing | `productHead` emits the **product schema only**. Breadcrumbs are the page's job via `seo.breadcrumbJsonLd([...])`. |
 | HIGH | Breadcrumb/product URLs built by string concatenation | Use `seo.productUrl()` / `seo.categoryUrl()`. Concatenation silently ignores a custom `productBase`/`categoryBase` or a route resolver. |
+| HIGH | Custom `routes.product` emits `/shop/undefined` | `ProductRouteInput.productSlug` is optional: a listed `Item` may carry no slug. Return `null` or route by `productId` when it is absent. A template literal with `undefined` typechecks. The default path already returns no URL without a slug. |
 | HIGH | `getProductDetail` result typed as `Product` | It returns `ProductDetail`, which is wider. The mistype is invisible until you pass it to the package. Fix the type at its source, not the call site. |
 | HIGH | Client bundle pulls in the storefront | Split `commerce-seo.config.ts` from `seo.ts`. See "Two Modules, Never One". |
 | CRITICAL | Product cards 404 on a CMS-fronted storefront | Cards build `/products/<ce-slug>` while the route renders CMS slugs. Resolve through the manifest and render a **non-link** when it returns `null` — never fall back to the catalog slug, which is the URL that 404s. See `references/cms-routes.md`. |
 | CRITICAL | Five of six landing pages missing from the sitemap | A resolver returns one URL per product. Declare `routes.list` so discovery enumerates every page. |
 | HIGH | Every landing page declares the same canonical | Rendering without a hint answers with the *primary*. Pass the hint on `productPage` / `productHead` / `createProductMetadata` so each page is canonical to itself. |
 | HIGH | Page advertises a `.md` mirror that 404s | The page and the mirror are separate claims. Carry `markdown` on the hint from the CMS record the render already fetched, rather than probing the catalog per render. |
+| MEDIUM | Code reads `schema.offers.price` unconditionally | `ProductSchema.offers` is optional. A record whose `pricing` is `null` gets no `Offer`, no Markdown pricing section and no OG price tags. A product with variants prices each variant, and its OG price comes from the `is_default` variant. See `references/head-and-jsonld.md`. |
 | MEDIUM | Prebuild script fails on CI with `ENOENT: .env.local` | `.env.local` is local-only; CI injects credentials into the environment. Make the file optional and fall back to `process.env`. |
 | MEDIUM | Sitemap lists products the storefront cannot render | Return `null` from `routes.product` to omit a product; the sitemap, `llms.txt`, and category listings all honour it. |
 

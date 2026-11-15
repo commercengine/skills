@@ -120,7 +120,7 @@ async function validateVpa(vpa: string) {
 
 ## Building Payment Payloads
 
-The `payment_method` parameter for `createOrder` and `retryOrderPayment` varies by payment type. The `gateway_reference_id` comes from `checkPaymentMethodSupport()` above.
+The `payment_method` parameter for `createOrder` and `retryOrderPayment` varies by payment type. The `gateway_reference_id` comes from `checkPaymentMethodSupport()` above. `createOrderPaymentRequest` takes the same Hyper Checkout and Express Checkout shapes, or a manual method the store offers (`{ payment_provider_slug }`), but not bank transfer (e-collection) or NACH.
 
 ### Hyper Checkout (simplest — redirects to hosted payment page)
 
@@ -143,8 +143,6 @@ The `payment_method` parameter for `createOrder` and `retryOrderPayment` varies 
   gateway_reference_id: gatewayRefId,
   return_url: `${window.location.origin}/order/confirm`,
   payment_method_type: "CARD",
-  payment_method: "VISA", // from BIN lookup → normalizeCardBrand()
-  auth_type: "OTP",
   card_number: "4111111111111111",
   card_exp_month: "12",
   card_exp_year: "2026",
@@ -163,10 +161,10 @@ The `payment_method` parameter for `createOrder` and `retryOrderPayment` varies 
   gateway_reference_id: gatewayRefId,
   return_url: `${window.location.origin}/order/confirm`,
   payment_method_type: "CARD",
-  payment_method: "VISA",
-  auth_type: "OTP",
+  payment_method: "VISA", // the saved card's brand → normalizeCardBrand()
   card_token: savedCard.card_token,
   card_security_code: cvv,
+  save_to_locker: false,
 }
 ```
 
@@ -193,9 +191,9 @@ The `payment_method` parameter for `createOrder` and `retryOrderPayment` varies 
   gateway_reference_id: gatewayRefId,
   return_url: `${window.location.origin}/order/confirm`,
   payment_method_type: "UPI",
-  payment_method: "UPI",
-  txn_id: transactionId,
+  payment_method: "UPI_PAY",
 }
+// Open payment_info.payment.sdk_params.pg_intent_url to launch the UPI app
 ```
 
 ### Express Checkout — Net Banking
@@ -249,6 +247,14 @@ async function pollPaymentStatus(orderNumber: string) {
 
 ## Retry Payment
 
+Three calls cover a payment that didn't go through:
+
+| Situation | Call |
+|-----------|------|
+| Payment failed and `is_retry_available` is `true` (immediately after a failure, or 15 minutes after the last request) | `retryOrderPayment` — a new payment request for the order, same or different method |
+| Express-checkout payment still pending, and the user wants another method now | `cancelPaymentRequest`, then retry. Without it, wait until `getPaymentStatus` returns `failed` with `is_retry_available: true` (typically ~3 minutes) |
+| Pay part of what is left with another method, or split the rest across methods | `createOrderPaymentRequest` — requests `amount` toward what is left to pay |
+
 When payment fails and `is_retry_available` is `true`, retry with the same or different payment method:
 
 ```typescript
@@ -266,7 +272,49 @@ const { data, error } = await sdk.order.retryOrderPayment(
   }
 );
 // Use data.payment_info to proceed with the retry payment flow
+// (null when the retry starts no gateway payment: a manual method or a bank transfer)
 ```
+
+### Cancel a Pending Payment Request
+
+```typescript
+// The user started UPI, then picked a card: free the pending request first
+const { error } = await sdk.order.cancelPaymentRequest({ order_number: orderNumber });
+if (!error) {
+  // retryOrderPayment(...) right away
+}
+```
+
+### Pay the Rest or Split It
+
+`createOrderPaymentRequest` requests a payment of `amount` toward what is left: after a failed or abandoned payment, or to split the total across methods. The total requested can't exceed the order's `to_be_paid`; failed and refunded payments don't count against it, so cancel a still-pending request first (`cancelPaymentRequest`). A cancelled order takes no payment (`order-cancelled` error code), and e-collection, NACH and credit-line methods can't be added.
+
+```typescript
+const { data, error } = await sdk.order.createOrderPaymentRequest(
+  { order_number: orderNumber },
+  {
+    amount: 500,
+    payment_method: {
+      payment_provider_slug: "juspay",
+      integration_type: "hyper-checkout",
+      gateway_reference_id: gatewayRefId,
+      return_url: `${window.location.origin}/order/confirm`,
+      action: "paymentPage",
+    },
+  }
+);
+
+if (!error) {
+  // data.payments → every payment record on the order
+  // data.pending_amount → what can still be requested
+  // data.payment_info → gateway details for this payment; null for a manual method
+  if (data.payment_info && "payment_links" in data.payment_info) {
+    window.location.href = data.payment_info.payment_links?.web ?? "";
+  }
+}
+```
+
+A manual method the store marks as paid (for example cash) is recorded as paid at once. Poll `getPaymentStatus` after a gateway payment as usual.
 
 ## Direct OTP Authentication (Express Checkout)
 
@@ -274,7 +322,8 @@ For express checkout card payments, the gateway may support direct OTP verificat
 
 ```typescript
 // After createOrder with express-checkout card payment:
-// 1. Check if response contains direct OTP challenge
+// 1. Check for a direct OTP challenge: payment_info.payment.authentication.params
+//    (id → txn_id, challenge_id, submit_otp_allowed, resend_otp_allowed)
 // 2. Show OTP input in your UI
 // 3. Verify:
 await sdk.payments.authenticateDirectOtp({
@@ -292,7 +341,7 @@ await sdk.payments.resendDirectOtp({
 });
 ```
 
-If direct OTP is not supported, fall back to a 3DS redirect (open the `auth_url` from the payment response in an iframe or redirect).
+If direct OTP is not supported (`authentication.params` is absent), fall back to a 3DS redirect: open `payment_info.payment.authentication.url` in an iframe or redirect.
 
 ## SDK Methods Reference
 
@@ -308,5 +357,7 @@ All payment-related SDK methods used in custom checkout:
 | `createOrder({ cart_id, payment_method? })` | `sdk.order` | Create order + initiate payment |
 | `getPaymentStatus(orderNumber)` | `sdk.order` | Poll payment result (string param) |
 | `retryOrderPayment({ order_number }, { payment_method })` | `sdk.order` | Retry failed payment |
+| `cancelPaymentRequest({ order_number })` | `sdk.order` | Cancel a pending payment request to switch methods |
+| `createOrderPaymentRequest({ order_number }, { amount, payment_method })` | `sdk.order` | Pay part of what is left, or split it across methods |
 | `authenticateDirectOtp({ txn_id, challenge_id, otp })` | `sdk.payments` | Direct OTP verification |
 | `resendDirectOtp({ txn_id, challenge_id })` | `sdk.payments` | Resend OTP |

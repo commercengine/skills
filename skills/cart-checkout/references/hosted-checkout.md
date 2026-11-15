@@ -84,6 +84,7 @@ Use **Checkout Studio** for checkout customization:
 | `onClose` | — | Checkout overlay was closed. |
 | `onComplete` | `{ id, orderNumber }` | Order was placed successfully. |
 | `onCartUpdate` | `{ count, total, currency }` | Cart contents changed. |
+| `onAnalyticsEvent` | `AnalyticsEvent` (`track` or `identify` envelope) | Segment-spec analytics event built inside checkout (Product Added, Checkout Started, Order Completed, …). Forward it to your analytics SDK and attach your page's identifiers; see `analytics/` (`references/destinations.md`). |
 | `onTokensUpdated` | `{ accessToken, refreshToken }` | Tokens changed (anonymous auth, login, logout, refresh). Use this for token sync. **Note:** Checkout's callback receives a single object `({ accessToken, refreshToken })`, while the SDK's `onTokensUpdated` receives two separate arguments `(accessToken, refreshToken)`. Do not mix up the signatures. |
 | `onLogin` | `{ user, loginMethod }` | User logged in (semantic event). `loginMethod` is `"whatsapp"`, `"phone"`, or `"email"`. |
 | `onLogout` | `{ user }` | User logged out (semantic event). |
@@ -117,6 +118,7 @@ For event-driven integration using `checkout.on()`:
 | `close` | — | Overlay was closed. |
 | `complete` | `{ id, orderNumber }` | Order placed. |
 | `cart:updated` | `{ count, total, currency }` | Cart changed. |
+| `analytics:event` | `AnalyticsEvent` | Analytics envelope built inside checkout. Same as `onAnalyticsEvent`. |
 | `auth:tokens-updated` | `{ accessToken, refreshToken }` | Tokens changed (anonymous auth, login, logout, refresh). |
 | `auth:login` | `{ user, loginMethod }` | User logged in (semantic event). |
 | `auth:logout` | `{ user }` | User logged out (semantic event). |

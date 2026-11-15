@@ -8,12 +8,14 @@ Every tool, what gates it, and the shapes it returns.
 
 | Tool | Purpose |
 |------|---------|
-| `search_products` | Keyword search. Returns product and variant identifiers, price, availability, storefront URL. |
+| `search_products` | Keyword search. Returns product and variant identifiers, price, availability, ordering rules, storefront URL. |
 | `get_product` | Full product details including variants, by product ID or storefront slug. |
 | `browse_store` | Lists categories, or the products in one category. Returns storefront URLs. |
 | `get_variant` | Resolves one variant to its canonical URL. Does **not** navigate. |
 
 All four are annotated `readOnlyHint: true` and `untrustedContentHint: true` — the latter marks catalog copy as merchant-controlled text an agent should not treat as instructions.
+
+**Price fields can be `null`.** Catalog `pricing` is nullable, and a record without it does not fail the tool: its `price` and `currency` are `null`, and so are `listPrice` and the ordering rules (`minOrderQuantity`, `maxOrderQuantity`, `incrementalQuantity`) where the result has them. A product with variants has no product-level pricing, so `get_product` returns `price: null` at the top while each entry in `variants[]` carries its own `price` and `currency`. In `search_products` and `browse_store` results, `url` is `null` when no route resolves, including an item with no slug and no custom `routes.product`.
 
 ### Cart — requires `session`
 
@@ -71,7 +73,7 @@ Every tool returns a discriminated result — never a thrown exception, and neve
 ```typescript
 type CommerceAiResult<T> =
   | { ok: true; data: T }
-  | { ok: false; error: { code: CommerceAiErrorCode; message: string; retryable?: boolean } };
+  | { ok: false; error: { code: CommerceAiErrorCode | (string & {}); message: string; retryable: boolean } };
 ```
 
 `retryable` is the field agents act on. It is derived from what the call actually does:

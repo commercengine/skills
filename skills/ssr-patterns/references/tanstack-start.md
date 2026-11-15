@@ -178,7 +178,7 @@ Use `publicStorefront()` for catalog reads (no session needed). Use `clientStore
 
 ### Server Functions (Optional)
 
-Server functions are not required for most storefront reads. Use them if you want to run logic at the edge or need specific server-side behavior. Keep them thin:
+Server functions are not required for most storefront reads. Use them if you want to run logic at the edge or need specific server-side behavior. Keep them thin. (Earlier 1.x releases of TanStack Start named the input step `.inputValidator()`; current releases use `.validator()`.)
 
 ```typescript
 // lib/server-fns/catalog.ts
@@ -186,7 +186,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { storefront } from "@/lib/storefront";
 
 export const fetchProducts = createServerFn({ method: "GET" })
-  .inputValidator((d: { page?: number; limit?: number } | undefined) => d ?? {})
+  .validator((d: { page?: number; limit?: number } | undefined) => d ?? {})
   .handler(async ({ data }) => {
     const sdk = storefront.publicStorefront();
     const { data: result, error } = await sdk.catalog.listProducts({
@@ -198,11 +198,11 @@ export const fetchProducts = createServerFn({ method: "GET" })
   });
 
 export const fetchProductDetail = createServerFn({ method: "GET" })
-  .inputValidator((d: string) => d)
+  .validator((d: string) => d)
   .handler(async ({ data: slug }) => {
     const sdk = storefront.publicStorefront();
     const { data: result, error } = await sdk.catalog.getProductDetail({
-      product_id_or_slug: slug,
+      product_id: slug, // accepts the product ID or slug
     });
     if (error) throw new Error(error.message);
     return result?.product ?? null;
@@ -235,16 +235,19 @@ export const fetchWishlist = createServerFn({ method: "GET" })
   });
 
 export const addToWishlist = createServerFn({ method: "POST" })
-  .inputValidator((d: { productId: string; variantId?: string | null }) => d)
+  .validator((d: { productId: string; variantId?: string | null }) => d)
   .handler(async ({ data }) => {
     const sdk = serverStorefront();
-    const { data: result, error } = await sdk.cart.addToWishlist(
+    const { data: result, error, events } = await sdk.cart.addToWishlist(
       { product_id: data.productId, variant_id: data.variantId ?? null }
     );
     if (error) throw new Error(error.message);
-    return result;
+    // Return `events` too if the page tracks analytics (see `analytics/`).
+    return { wishlist: result, events };
   });
 ```
+
+Cart, order and wishlist mutations return `events` beside `data` and `error`: the analytics events the call produced, each with a server-issued `event_id`. A server function that returns only `data` drops them. Return them when the page tracks analytics, so the client can pass them to `@commercengine/analytics` and its copy of each event deduplicates against the server's.
 
 Do not manually call `sdk.getUserId()` or pass `user_id` for ordinary wishlist/cart methods. The session-aware overloads resolve it automatically.
 
@@ -272,12 +275,15 @@ export const Route = createFileRoute("/product/$slug")({
 });
 ```
 
+For canonical URLs, Open Graph and JSON-LD, build the head with `createTanStackStartProductHead` from `@commercengine/seo/tanstack-start` in the loader. See `seo/`.
+
 ### Pre-rendering
 
 Enable pre-rendering in `vite.config.ts`:
 
 ```typescript
-import { tanstackStart } from "@tanstack/react-start/plugin";
+import { defineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
 export default defineConfig({
   plugins: [

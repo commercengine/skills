@@ -1,8 +1,8 @@
 {
   "name": "ce-auth",
   "displayName": "Commerce Engine Auth",
-  "description": "Commerce Engine authentication - anonymous auth, OTP login (email/phone/WhatsApp), password auth, token refresh, user profile management",
-  "version": "1.0.0",
+  "description": "Commerce Engine authentication - anonymous auth, OTP login (email/phone/WhatsApp), password auth, token refresh, account recovery, user profile and customer attribute management",
+  "version": "1.2.0",
   "author": {
     "name": "Commerce Engine",
     "email": "support@commercengine.io"

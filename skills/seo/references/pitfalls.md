@@ -109,6 +109,12 @@ Detect it by looking for a **runtime** signal, not by reading. If a diagnostic c
 
 `${site.url}/product/${slug}` ignores `productBase` and any `routes.product` function. Use `seo.productUrl()` / `seo.categoryUrl()`.
 
+### Custom product resolver publishes `/…/undefined`
+
+**Symptom:** links ending in `/undefined` in category or search Markdown, or in agent results.
+
+`ProductRouteInput.productSlug` is optional, because a listed `Item` may carry no `product_slug`. A resolver that interpolates it unchecked still typechecks: a template literal accepts `undefined`. Return `null` when the slug is absent, or route by `productId`. The default `productBase` path already returns no URL without one.
+
 ### `getProductDetail` result typed as `Product`
 
 **Symptom:** a type error only when passing the product to the package — *"missing the following properties: description, hsn_code, videos, shipping…"*
@@ -146,6 +152,12 @@ A product emits one `og:image` per gallery image, so the property name is not un
 ---
 
 ## MEDIUM
+
+### Code assumes every product has an `Offer`
+
+**Symptom:** `Cannot read properties of undefined (reading 'price')` on some products only.
+
+`pricing` is `null` for a product with variants and for one with no pricing configured. The package then emits no `Offer` (`ProductSchema.offers` is optional), no Markdown pricing section and no OG price tags, except that a product with variants takes its OG price from the `is_default` variant. Check `offers` before reading it.
 
 ### Prebuild fails on CI with `ENOENT: .env.local`
 

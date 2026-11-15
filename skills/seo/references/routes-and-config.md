@@ -59,7 +59,7 @@ Note `/products`, plural. Many Commerce Engine starters explicitly configure `pr
 ```typescript
 interface ProductRouteInput {
   productId: string;
-  productSlug: string;
+  productSlug?: string;   // absent for a listed Item whose response carries none
   variantId?: string | null;
   variantSlug?: string | null;
 }
@@ -67,11 +67,15 @@ interface ProductRouteInput {
 
 ```typescript
 routes: {
-  product: ({ productSlug, variantSlug }) =>
-    variantSlug ? `/shop/${productSlug}/${variantSlug}` : `/shop/${productSlug}`,
+  product: ({ productSlug, variantSlug }) => {
+    if (!productSlug) return null;   // or route by productId — see below
+    return variantSlug ? `/shop/${productSlug}/${variantSlug}` : `/shop/${productSlug}`;
+  },
   category: (category) => `/collections/${category.slug}`,
 }
 ```
+
+**`productSlug` is optional**, because `Item.product_slug` is. Without a custom `routes.product`, the default `productBase` path has nothing to build and the item gets no URL (`null`), so it is listed without a link. A custom resolver still runs for it and may route by `productId`. A template literal accepts `undefined` without a type error, so a resolver that interpolates the slug unchecked publishes `/shop/undefined`.
 
 `routes.category` receives the whole `Category`, so `category.slug`, `category.id` and `category.name` are all available there.
 
@@ -80,6 +84,7 @@ There is **no category information in `ProductRouteInput`** — a product can be
 ```typescript
 routes: {
   product: async ({ productId, productSlug }) => {
+    if (!productSlug) return null;
     const category = await cms.primaryCategoryFor(productId);
     return `/shop/${category?.slug ?? "all"}/${productSlug}`;
   },
@@ -209,12 +214,13 @@ export default createSitemap(seo);
 
 ## Markdown Mirrors
 
-Every product and category gets a `.md` twin: frontmatter (canonical URL, price, availability) plus a readable body. `llms.txt` summarises the store and indexes categories; `sitemap.md` indexes every mirror.
+Every product and category gets a `.md` twin: frontmatter (title, canonical URL, Markdown URL) plus a readable body with availability, pricing and variants. `llms.txt` summarises the store and indexes categories; `sitemap.md` indexes every mirror.
 
-Two behaviours worth knowing:
+Three behaviours worth knowing:
 
 - Category listings only link a `.md` mirror for products that actually have one. A product omitted by `routes.product` is listed without a dead link.
 - Markdown escaping covers link and HTML syntax, so a product name containing `[`, `]`, `<`, or `|` cannot break the table or inject markup.
+- A record whose `pricing` is `null` gets no `## Pricing` section, and `-` in a table's price column.
 
 ## Bundle Boundary Check
 

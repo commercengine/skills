@@ -37,20 +37,21 @@ See `auth/` skill for the full OTP login implementation (phone, email, or WhatsA
 ### Step 3: Collect & Update Addresses
 
 ```typescript
-// Fetch saved addresses
-const { data: addresses } = await sdk.customer.listAddresses({ user_id: userId });
+// Fetch saved addresses (customer_id is resolved from the session)
+const { data: addresses } = await sdk.customer.listAddresses();
 
 // Update cart with selected address IDs
-const { data, error } = await sdk.cart.updateCartAddress(
+const { data, error, events } = await sdk.cart.updateCartAddress(
   { id: cartId },
   {
     billing_address_id: "addr_billing_123",
     shipping_address_id: "addr_shipping_456",
   }
 );
+// events: `Checkout Started`, on every address update (even an unchanged one)
 ```
 
-### Step 3: Validate Fulfillment
+### Step 4: Validate Fulfillment
 
 ```typescript
 // Check if shipping is available to the destination pincode
@@ -93,25 +94,35 @@ const { data: prefData, error: prefErr } = await sdk.cart.updateFulfillmentPrefe
 // );
 ```
 
-### Step 4: Apply Discounts (Optional)
+### Step 5: Apply Discounts (Optional)
 
 ```typescript
-// Apply coupon
+// Apply coupon (events: `Coupon Applied`)
 await sdk.cart.applyCoupon({ id: cartId }, { coupon_code: "SAVE20" });
+
+// What the customer can redeem
+const { data: program } = await sdk.customer.getLoyaltyProgram(); // 404 when the store has no loyalty program
+const { data: loyalty } = await sdk.customer.getLoyaltyDetails();
+const { data: credit } = await sdk.customer.getCreditBalance();
+// program.loyalty_program.point_value, loyalty.loyalty.points_balance, credit.balance_amount (spendable)
 
 // Apply loyalty points
 await sdk.cart.redeemLoyaltyPoints({ id: cartId }, { loyalty_point_redeemed: 500 });
 
 // Remove loyalty points
 await sdk.cart.removeLoyaltyPoints({ id: cartId });
+
+// Apply credit balance (sets the amount used), or remove it
+await sdk.cart.redeemCreditBalance({ id: cartId }, { credit_balance_used: 250 });
+await sdk.cart.removeCreditBalance({ id: cartId });
 ```
 
-### Step 5: Create Order & Initiate Payment
+### Step 6: Create Order & Initiate Payment
 
 > See `payment-patterns.md` § "Building Payment Payloads" for all payment_method shapes (hyper checkout, cards, UPI, net banking, saved cards).
 
 ```typescript
-const { data: order, error } = await sdk.order.createOrder({
+const { data: order, error, events } = await sdk.order.createOrder({
   cart_id: cartId,
   payment_method: {
     payment_provider_slug: "juspay",
@@ -121,18 +132,25 @@ const { data: order, error } = await sdk.order.createOrder({
     action: "paymentPage",
   },
 });
+// events: `Order Created` — forward it if you track in the browser (see `analytics/`)
 
-if (order.payment_required) {
+if (error) {
+  // 409 `credit-balance-unavailable`: the credit balance can't be used right now. Nothing was placed; retry shortly
+  return showError(error.message);
+}
+
+if (order.payment_required && order.payment_info) {
   // Use payment_info from response to proceed with payment
   // For hyper-checkout: redirect to payment_info.payment_links.web
   // For express-checkout: handle 3DS redirect or direct OTP flow
 } else {
-  // Order placed without payment (e.g., 100% coupon/loyalty)
+  // No gateway payment started: nothing left to pay (coupon, loyalty, credit balance),
+  // a credit-line order, a manual method or a bank transfer. Poll getPaymentStatus for the outcome.
   showConfirmation(order.order.order_number);
 }
 ```
 
-### Step 6: Handle Payment Callback
+### Step 7: Handle Payment Callback
 
 After the user returns from the payment gateway:
 
@@ -145,6 +163,7 @@ switch (paymentStatus.status) {
     showOrderConfirmation(orderNumber);
     break;
   case "pending":
+  case "partially_paid":
     // Still processing — poll again after delay
     setTimeout(() => pollPaymentStatus(orderNumber), 3000);
     break;
@@ -158,7 +177,7 @@ switch (paymentStatus.status) {
 }
 ```
 
-### Step 7: Retry Payment (If Failed)
+### Step 8: Retry Payment (If Failed)
 
 ```typescript
 if (paymentStatus.is_retry_available) {
@@ -174,9 +193,11 @@ if (paymentStatus.is_retry_available) {
       },
     }
   );
-  // Use payment_info from response to proceed with retry
+  // Use data.payment_info to proceed (null for a manual method or bank transfer)
 }
 ```
+
+To pay only part of what is left with another method, or split the rest across methods, use `sdk.order.createOrderPaymentRequest({ order_number }, { amount, payment_method })` instead. To switch methods while an express-checkout payment is still pending, cancel it first with `sdk.order.cancelPaymentRequest({ order_number })`. See `payment-patterns.md` § "Retry Payment".
 
 ## Visual Flow
 
@@ -184,5 +205,5 @@ if (paymentStatus.is_retry_available) {
 Review Cart → Auth (OTP) → Set Addresses → Check Fulfillment → Apply Discounts
     → Create Order → Payment Gateway → Poll Status → Confirmation
                                           ↓
-                                   Failed? → Retry Payment
+                                   Failed? → Retry Payment (or pay the rest with another method)
 ```

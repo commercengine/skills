@@ -12,29 +12,33 @@ Since the user is authenticated, always create/update addresses on their custome
 
 ```typescript
 // Step 1: Create (or update) the address on the customer profile
-const { data, error } = await sdk.customer.createAddress(
-  { user_id: userId },
-  {
-    first_name: "Jane",
-    last_name: "Doe",
-    phone: "9876543210",
-    country_code: "+91",
-    email: "jane@example.com",
-    address_line1: "123 Main St",
-    address_line2: "",
-    city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400001",
-    country: "India",
-  }
-);
+// (customer_id is resolved from the session; pass { customer_id } first to override)
+const { data, error } = await sdk.customer.createAddress({
+  first_name: "Jane",
+  last_name: "Doe",
+  phone: "9876543210",
+  country_code: "+91",
+  email: "jane@example.com",
+  address_line1: "123 Main St",
+  address_line2: "",
+  landmark: null,
+  city: "Mumbai",
+  state: "Maharashtra",
+  pincode: "400001",
+  country: "India",
+  tax_identification_number: null,
+  business_name: null,
+  nickname: null,
+});
 const addressId = data?.address?.id;
 
 // Step 2: Link to cart (sets both shipping and billing)
-const { data: cartData, error: cartErr } = await sdk.cart.updateCartAddress(
+const { data: cartData, error: cartErr, events } = await sdk.cart.updateCartAddress(
   { id: cartId },
   { shipping_address_id: addressId, billing_address_id: addressId }
 );
+// events: `Checkout Started`, returned on every address update (even an unchanged one).
+// Tracking checkout in the browser? Forward it — see `analytics/`
 ```
 
 ## Auto-Link on Checkout Open
@@ -43,7 +47,7 @@ When the checkout step opens, fetch saved addresses and auto-link the first one 
 
 ```typescript
 async function onCheckoutStepOpen() {
-  const { data } = await sdk.customer.listAddresses({ user_id: userId });
+  const { data } = await sdk.customer.listAddresses();
   const addresses = data?.addresses || [];
 
   if (cart?.id && !cart.shipping_address?.id && addresses.length > 0) {
@@ -183,4 +187,4 @@ await sdk.cart.updateFulfillmentPreference(
 
 ### Restore Existing Preference
 
-If the cart already has a `fulfillment_preference` (e.g., user refreshed the page), restore UI selections from it instead of auto-selecting. Check `cart.fulfillment_preference.fulfillment_type` and match shipment IDs against the fetched options.
+If the cart already has a `fulfillment_preference` (e.g., user refreshed the page), restore UI selections from it instead of auto-selecting. Check `cart.fulfillment_preference?.fulfillment_type` (the field is absent until a preference is set) and match shipment IDs against the fetched options.
