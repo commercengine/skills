@@ -86,7 +86,7 @@ const { data, error, events } = await sdk.cart.addDeleteCartItem(
 return { cart: data?.cart, events, error: error?.message };
 ```
 
-When a server action, server function or API route runs the mutation and the page tracks analytics, return `events` with the result. The client passes them to `@commercengine/analytics`, and its copy of each event deduplicates against Commerce Engine's server copy. See `analytics/`.
+When a server action, server function or API route runs the mutation and the page tracks analytics, return `events` with the result. The client passes them to `@commercengine/analytics`, and its copy of each event can deduplicate against Commerce Engine's server copy. See `analytics/`.
 
 ## Framework Quick Reference
 

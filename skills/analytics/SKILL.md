@@ -17,13 +17,13 @@ metadata:
 npm install @commercengine/analytics
 ```
 
-This skill covers analytics **0.3.0**. Its peer is `@commercengine/storefront-sdk` >= 0.16.0, which `@commercengine/storefront` 0.2.0 and later already include.
+This skill covers analytics **0.3.0**. Its declared peer is `@commercengine/storefront-sdk` >= 0.16.0, but install a later release. storefront-sdk 0.16.0, and `@commercengine/storefront` 0.2.0 which bundles it, were published without `events` at runtime: `events` is `undefined` on every result, so the gated examples below send nothing and iterating it throws.
 
 ## Why It Exists: Two Copies of One Event
 
 Commerce Engine already sends its own **server-side copy** of each event a storefront mutation causes (`Product Added`, `Checkout Started`, `Order Created` and so on) to the analytics integrations configured for the store. The pixel, tag or browser SDK on your storefront sends a **second copy**. Ad platforms such as Meta count the two as one only when both carry the same `event_id` for the same event name.
 
-The package's main job is to build the browser copy **with the id the server used**. Storefront SDK 0.16 returns that id on every mutation that has a server copy:
+The package's main job is to build the browser copy **with the id the server gives its own copy**. Storefront SDK 0.16 returns that id on every mutation that has a server copy:
 
 ```
 const { data, error, events } = await sdk.cart.addDeleteCartItem(...)
@@ -38,6 +38,10 @@ const { data, error, events } = await sdk.cart.addDeleteCartItem(...)
 |---|---|---|---|
 | Browser copy | your storefront, built with this package | Segment / RudderStack browser SDK, ad pixels | this one |
 | Server copy | Commerce Engine, automatically | the store's analytics integrations | nothing to build |
+
+If `events` is `undefined` rather than an array, the installed storefront SDK predates it. Upgrade the SDK; don't substitute `[]`, which hides the cause.
+
+**When the copies match.** Deduplication needs the server copy that reaches your destination to carry the same `event_id` as the browser copy. Check one event in the destination (for example in Meta Events Manager's test events) before relying on it: the server copy's `properties.event_id` should be the ULID the response returned, or the order number for `Order Completed`. Until it is, the two copies are counted separately.
 | Webhooks | Commerce Engine, server to server | your backend endpoint | `webhooks/` |
 
 Webhooks are a different channel, meant for your backend (syncing, notifications). Don't replay them into a CDP as analytics events: Commerce Engine already sends the server copy, so a replayed webhook adds yet another copy of the same action. A webhook's own `event_id` (its `X-CE-Event-ID` header) is your backend's idempotency key. The id to put on a browser copy is always the one in the mutation response's `events`.
@@ -220,7 +224,7 @@ analytics.track(...a.trackArgs(a.toOrderCompleted(data.order)));
 
 `createOrder` is a different event. Map its result to `Order Created` with `a.toOrderCreated(data.order, { events })`: the order is placed but not necessarily paid.
 
-> **Upgrade together with the server.** Commerce Engine's server copy of `Order Completed` carries the order number as its `event_id` starting with the same release as analytics 0.3.0. A page still on 0.2.x sends `{store}.order_completed.{order}`, so its `Order Completed`, the one event 0.2.x still deduplicated, stops matching. Upgrade `@commercengine/analytics` to 0.3.0 together with storefront SDK 0.16.
+> **Upgrading from 0.2.x: switch when the server copies do.** 0.2.x derives ids such as `{store}.order_completed.{order}`. 0.3.0 uses the response's `event_id`, and the order number for `Order Completed`. Each version matches only server copies built the same way. Look at a recent server copy in your destination: while its `properties.event_id` still has the derived form, stay on 0.2.x, because upgrading would stop deduplication that works today. Upgrade once server copies carry ULIDs and order numbers.
 
 ### Two events outside the handshake
 

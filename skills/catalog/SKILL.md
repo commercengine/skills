@@ -206,7 +206,7 @@ if (product.has_variant) {
 }
 ```
 
-`addDeleteCartItem` returns `{ data, error, events }`. `events` carries the server's `Product Added` event with its `event_id`: if the storefront tracks in the browser, pass it to `@commercengine/analytics` so the two copies deduplicate (see `analytics/`).
+`addDeleteCartItem` returns `{ data, error, events }`. `events` carries the server's `Product Added` event with its `event_id`: if the storefront tracks in the browser, pass it to `@commercengine/analytics` so the two copies can deduplicate (see `analytics/`).
 
 With Hosted Checkout, use `addToCart` instead:
 

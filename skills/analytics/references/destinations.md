@@ -79,7 +79,7 @@ initCheckout({
 
 Use the bound `a.ambientContext()`: it applies the initializer's `enrich` and `cookies`, so a consent opt-out covers forwarded events too. The standalone `ambientContext()` knows neither. Both return `undefined` when there is nothing to attach.
 
-Forward `event.properties` unchanged. Checkout builds its envelopes with the same mappers, and stamps each server-backed event with the `event_id` from its own mutation's `events`, so the forwarded copy already deduplicates against the server's. Don't derive, overwrite or strip `event_id` in the parent page. An envelope without one is an event with no server copy to match, or one sent before the server reported an id.
+Forward `event.properties` unchanged. Checkout builds its envelopes with the same mappers, and stamps each server-backed event with the `event_id` from its own mutation's `events`, so the forwarded copy carries the same id as the server's copy, and deduplicates once the server copies carry those ids (see "When the copies match" in `SKILL.md`). Don't derive, overwrite or strip `event_id` in the parent page. An envelope without one is an event with no server copy to match, or one sent before the server reported an id.
 
 ## Which Field Each Destination Deduplicates On
 

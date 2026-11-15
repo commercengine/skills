@@ -19,7 +19,7 @@ All frameworks install `@commercengine/storefront` — a unified package with su
 
 Core principle: **public reads** use the public accessor (API-key-backed, build-safe). **Live session flows** (auth, cart, orders) use the session/client/server accessor.
 
-Every SDK call returns `{ data, error }`, where `data` is the API response's `content`. Cart, order and wishlist mutations also return `events`: the analytics events the request produced, each with a server-issued `event_id`. Forward them with `@commercengine/analytics` (`ce-analytics`) so browser and server copies of an event deduplicate.
+Every SDK call returns `{ data, error }`, where `data` is the API response's `content`. Cart, order and wishlist mutations also return `events`: the analytics events the request produced, each with a server-issued `event_id`. Forward them with `@commercengine/analytics` (`ce-analytics`) so browser and server copies of an event can deduplicate.
 
 ## By Task
 

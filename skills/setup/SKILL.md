@@ -12,7 +12,7 @@ metadata:
 
 # Setting Up Commerce Engine
 
-This skill sets up the latest Commerce Engine SDK surface: `@commercengine/storefront` 0.2.0, which re-exports `@commercengine/storefront-sdk` 0.16.0.
+This skill sets up the latest Commerce Engine SDK surface: `@commercengine/storefront` 0.2.x, which re-exports `@commercengine/storefront-sdk` 0.16.x. Install a release later than 0.2.0 / 0.16.0: those two were published without the `events` result field at runtime.
 
 ## Current Mental Model
 
@@ -554,7 +554,7 @@ Set `customer_group_id` after login from the session (`await sdk.getCustomerGrou
 
 Commerce Engine sends e-commerce events server-side per the Segment spec. Merchants route these events into Segment, RudderStack, or similar tools via Admin integrations. Storefront code does not need to send anything for these server-side events to arrive.
 
-The mutations listed in [Result Shape](#result-shape) return the events they produced in `events`, each with the `event_id` of the server's own copy. If the storefront also tracks in the browser (Segment analytics.js, RudderStack JS, pixels), map SDK results with `@commercengine/analytics` and pass `events` through, so the browser copy carries the same `event_id` and the two copies deduplicate. Do not derive or invent event ids. See `analytics/`.
+The mutations listed in [Result Shape](#result-shape) return the events they produced in `events`, each with the `event_id` of the server's own copy. If the storefront also tracks in the browser (Segment analytics.js, RudderStack JS, pixels), map SDK results with `@commercengine/analytics` and pass `events` through, so the browser copy carries the same `event_id` and the two copies can deduplicate. Do not derive or invent event ids. See `analytics/`, including when the copies match.
 
 ## Upgrading to storefront-sdk 0.16
 
@@ -575,7 +575,7 @@ Requests are unchanged; the breaking changes are to result types and type export
 | HIGH | Using `public()` for cart/auth/customer/order flows | Use `session()` for any live user or anonymous session work |
 | HIGH | Using `CookieTokenStorage` as SSR server storage | Use `ServerTokenStorage` from `@commercengine/ssr-utils`, or use the built-in wrappers for Next.js / TanStack Start |
 | HIGH | Skipping `StorefrontBootstrap` in SSR apps | Mount a client component calling `storefront.bootstrap()` once in the root layout |
-| HIGH | Browser analytics events sent without the server's `event_id` | Pass the mutation's `events` to `@commercengine/analytics` so browser and server copies deduplicate (see `analytics/`) |
+| HIGH | Browser analytics events sent without the server's `event_id` | Pass the mutation's `events` to `@commercengine/analytics` so browser and server copies can deduplicate (see `analytics/`) |
 | MEDIUM | Bootstrapping anonymous auth in build/prerender code | Use `public()` instead |
 | MEDIUM | Duplicating config across public and session clients | Prefer one `createStorefront(...)` factory |
 | MEDIUM | Test doubles or wrappers for cart/order/wishlist mutations without `events` | Include `events: []` in hand-built results of the methods in [Result Shape](#result-shape) |
