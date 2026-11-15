@@ -56,6 +56,8 @@ function removeFromCart(productId: string, variantId: string) {
 }
 ```
 
+Each of these calls also returns `events` (`Cart Created`, `Product Added`, `Product Removed`) with server-issued `event_id`s. If the storefront tracks cart events in the browser, forward them from inside the queued operation, where the result is in hand — see `analytics/`.
+
 For a more robust approach, use a dedicated async queue library (e.g., `p-queue` with `concurrency: 1`, `async-mutex`, or `@tanstack/react-pacer`'s `AsyncQueuer`).
 
 **Why this matters**: Without queuing, adding item A then immediately adding item B can result in only one item in the cart — whichever response arrives last overwrites the other.
@@ -126,7 +128,9 @@ The cart object has multiple total fields:
 | Field | Meaning |
 |-------|---------|
 | `subtotal` | Sum of item prices before tax/discounts |
-| `grand_total` | After tax, shipping, discounts |
-| `to_be_paid` | After loyalty points and credit balance deductions |
+| `grand_total` | After tax, shipping, discounts and redeemed loyalty points |
+| `to_be_paid` | `grand_total` less `credit_balance_used` |
 
 Always show `to_be_paid` as the final amount the customer will pay. It accounts for all deductions.
+
+`to_be_paid` goes negative when the applied credit balance exceeds the cart total (for example after items are removed). Such a cart can't be checked out: set a lower amount with `sdk.cart.redeemCreditBalance()` (it replaces the amount applied) or remove it with `sdk.cart.removeCreditBalance()`. To cap what you offer, read the spendable credit with `sdk.customer.getCreditBalance()` (`balance_amount`; nothing can be spent when it is `0` or below).

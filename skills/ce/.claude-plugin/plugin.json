@@ -1,7 +1,7 @@
 {
   "name": "ce",
   "description": "Commerce Engine router - automatically routes to the right skill based on your e-commerce task",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Commerce Engine",
     "email": "support@commercengine.io"

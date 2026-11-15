@@ -75,6 +75,12 @@ import { site, routes } from "./commerce-seo.config";  // storefront-free
 
 Both typecheck and build. Only a bundle inspection tells them apart. See `ce-seo`.
 
+### A product resolver that assumes a slug
+
+**Symptom:** agent results linking to `/products/undefined`.
+
+`ProductRouteInput.productSlug` is optional, because a listed `Item` may carry no `product_slug`. A custom `routes.product` that interpolates it unchecked still typechecks. Return `null` when it is absent, or route by `productId`. Without a custom resolver, such an item already gets `url: null`.
+
 ### Raw SDK exceptions reaching the agent
 
 Some SDK calls throw rather than returning `{ data, error }` — reading a cart with no session, for example. Wrap SDK calls so the agent gets a typed failure with a `code` and a `retryable` flag, not a stack trace. The built-in tools do this; custom modules must too.
@@ -98,6 +104,10 @@ Without it, "are the tools live?" requires probing globals in a flag-enabled bro
 ### Expecting instant availability
 
 There is no readiness event. Tools appear after hydration, plus any lazy chunks, plus registration. An agent probing at load finds nothing; Lighthouse, auditing after the page settles, finds everything. Both observations can be true at once.
+
+### Reading `price: null` as free
+
+A catalog record without pricing returns `null` for `price`, `currency` and the ordering-rule fields instead of failing. For a product with variants that is the normal case at the product level: each `variants[]` entry carries the price. Custom modules and prompts should treat `null` as "no price here", never as zero.
 
 ### Re-serializing tool output
 

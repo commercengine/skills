@@ -2,7 +2,7 @@
   "name": "ce-catalog",
   "displayName": "Commerce Engine Catalog",
   "description": "Commerce Engine product catalog - products, variants, SKUs, categories, faceted search, reviews, and recommendations",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Commerce Engine",
     "email": "support@commercengine.io"

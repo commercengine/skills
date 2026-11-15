@@ -5,14 +5,14 @@ license: MIT
 allowed-tools: Bash
 metadata:
   author: commercengine
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
 
 # Products & Catalog
 
-> **Prerequisite**: SDK initialized and anonymous auth completed. See `setup/`.
+> **Prerequisite**: SDK initialized. See `setup/`. Catalog reads work on the public client (`public()` / `publicStorefront()`) with no anonymous auth; `createProductReview` needs the session client.
 
 ## Quick Reference
 
@@ -27,9 +27,9 @@ metadata:
 | Search products | `sdk.catalog.searchProducts({ query: searchTerm, filter?, sort?, facets? })` |
 | Get reviews | `sdk.catalog.listProductReviews({ product_id })` |
 | Submit review | `sdk.catalog.createProductReview({ product_id }, { ... })` |
-| Similar products | `sdk.catalog.listSimilarProducts({ product_id })` |
-| Upsell products | `sdk.catalog.listUpSellProducts({ product_id })` |
-| Cross-sell products | `sdk.catalog.listCrossSellProducts({ product_id })` |
+| Similar products | `sdk.catalog.listSimilarProducts({ product_id: [productId] })` |
+| Upsell products | `sdk.catalog.listUpSellProducts({ product_id: [productId] })` |
+| Cross-sell products | `sdk.catalog.listCrossSellProducts({ product_id: [productId] })` |
 
 ## Product Hierarchy
 
@@ -102,7 +102,8 @@ const { data, error } = await sdk.catalog.searchProducts({
 });
 
 // data.skus → Item[] (flat list — each variant is its own record)
-//   Each Item includes product_slug and variant_slug for building SEO-friendly URLs
+//   product_slug and variant_slug (optional) build SEO-friendly URLs; fall back to product_id
+//   item.pricing can be null (no pricing configured) — see "Pricing" below
 // data.facet_distribution → { [attribute]: { [value]: count } }
 // data.facet_stats → { [attribute]: { min, max } } (e.g. price range)
 // data.pagination → { page, limit, total, total_pages }
@@ -125,6 +126,7 @@ const { data, error } = await sdk.catalog.listProducts({
 
 // data.products → Product[] (each product may contain a variants array)
 // Check product.has_variant to know if options exist
+// product.pricing is null when has_variant is true (pricing is per variant)
 ```
 
 **For a flat grid without filters** (each variant = separate card):
@@ -132,7 +134,7 @@ const { data, error } = await sdk.catalog.listProducts({
 ```typescript
 const { data, error } = await sdk.catalog.listSkus();
 // Returns Item[] — same flat type as searchProducts
-// Each Item includes product_slug and variant_slug for building SEO-friendly URLs
+// product_slug and variant_slug are optional: fall back to product_id for URLs
 ```
 
 ### Product Detail Page (PDP)
@@ -153,6 +155,33 @@ if (product?.has_variant && (!product.variants || product.variants.length === 0)
   // variantData.variants contains all options with pricing and stock
 }
 ```
+
+### Pricing
+
+`pricing` is `ProductPricing | null` on `Product`, `ProductDetail`, `Variant`, `VariantDetail` and `Item`:
+
+- `null` on a `Product` / `ProductDetail` with `has_variant: true`: pricing is per variant.
+- `null` on any of them when no pricing is configured (for the applicable customer group).
+
+Never read `product.pricing.selling_price` unguarded. For a variant product, read the resolved variant's pricing:
+
+```typescript
+// Until the option selection resolves, show the default variant's price
+const pricing = product.has_variant
+  ? (resolvedVariant ?? product.variants.find((v) => v.is_default))?.pricing ?? null
+  : product.pricing;
+
+const price = pricing?.selling_price;  // undefined → render no price (never 0)
+const listPrice = pricing?.listing_price;
+const currency = pricing?.currency;
+
+// Ordering rules live on pricing too; the API defaults min and step to 1
+const minQty = pricing?.min_order_quantity ?? 1;
+const step = pricing?.incremental_quantity ?? 1;
+const maxQty = pricing?.max_order_quantity ?? null;
+```
+
+A selection without pricing has no price to show: keep Add to Cart disabled for it (see `references/pdp-option-model.md`).
 
 ### Adding a Product to Cart from PDP
 
@@ -177,6 +206,8 @@ if (product.has_variant) {
 }
 ```
 
+`addDeleteCartItem` returns `{ data, error, events }`. `events` carries the server's `Product Added` event with its `event_id`: if the storefront tracks in the browser, pass it to `@commercengine/analytics` so the two copies deduplicate (see `analytics/`).
+
 With Hosted Checkout, use `addToCart` instead:
 
 ```typescript
@@ -200,7 +231,7 @@ Use option query params as source of truth for variant products: `?size=large&co
   - If URL has only `variant`, backfill option params from that variant.
   - If URL has partial options + valid `variant`, fill only missing options from that variant.
   - If `variant` is invalid, fall back to default (`is_default`, else first variant).
-- Disable Add to Cart until required options are selected and the resolved variant is purchasable (`stock_available` or `backorder`).
+- Disable Add to Cart until required options are selected and the resolved variant is purchasable (`stock_available` or `backorder`) and has `pricing`.
 - Disable option values that cannot lead to a purchasable variant under current partial selection.
 
 Use canonical SDK types directly:
@@ -209,6 +240,7 @@ Use canonical SDK types directly:
 import type {
   AssociatedOption,
   Product,
+  ProductPricing,
   Variant,
   VariantOption,
 } from "@commercengine/storefront";
@@ -217,7 +249,7 @@ import type {
 Do not derive these app-level types from OpenAPI schemas.
 
 Reference implementation:
-- `references/pdp-option-model.md` (URL state + variant matching + attribute/variantOption UI unification)
+- `references/pdp-option-model.md` (URL state + variant matching + attribute/variantOption UI unification + nullable pricing)
 
 ### Attribute vs VariantOption (PDP Consistency)
 
@@ -254,7 +286,7 @@ An advanced feature for B2B storefronts where the admin has configured customer 
 
 ### Wishlists
 
-Commerce Engine supports wishlists (add, remove, fetch) via SDK methods. These skills cover the main storefront flows — for wishlists and other secondary features, refer to the [LLM API reference](https://llm-docs.commercengine.io/) or [CE docs](https://www.commercengine.io/docs).
+Commerce Engine supports wishlists via `sdk.cart.getWishlist()`, `sdk.cart.addToWishlist({ product_id, variant_id })` and `sdk.cart.removeFromWishlist({ product_id, variant_id })` (the user ID resolves from the session). They return `data.products` as `Item[]`, so the same `pricing` and slug guards apply. `addToWishlist` and `removeFromWishlist` also return `events` (`Product Added to Wishlist` / `Product Removed from Wishlist`) for browser analytics (see `analytics/`). These skills cover the main storefront flows — for wishlists and other secondary features, refer to the [LLM API reference](https://llm-docs.commercengine.io/) or [CE docs](https://www.commercengine.io/docs).
 
 ## Common Pitfalls
 
@@ -266,9 +298,11 @@ Commerce Engine supports wishlists (add, remove, fetch) via SDK methods. These s
 | HIGH | Resolving variants from a single option or `variant_options` only | Match against `variant.associated_options` across **all** option keys. |
 | HIGH | Deriving option/variant types from generated schemas in app code | Import SDK types directly from `@commercengine/storefront` (`AssociatedOption`, `VariantOption`, `Variant`, `Product`). |
 | MEDIUM | Treating `attributes` and `variant_options` as unrelated PDP UIs | Build a unified option-display model so shared keys (e.g. `metal`) can render consistently across variant and non-variant products. |
+| HIGH | Reading `product.pricing.selling_price` (or `item.pricing.x`) unguarded | `pricing` is `null` for products with variants and wherever no pricing is configured: use the resolved variant's pricing and `?.` |
 | HIGH | Ignoring `has_variant` flag | Always check `has_variant` before trying to access variant data |
 | HIGH | Adding product to cart instead of variant | When `has_variant: true`, must add the specific variant, not the product |
 | MEDIUM | Not using `slug` for URLs | Use `slug` field for SEO-friendly URLs — `product_id` params across catalog endpoints accept both IDs and slugs |
+| MEDIUM | Assuming `Item.product_slug`, `variant_slug`, `images` or `attributes` are present | They are optional on `Item`: fall back to `product_id` for URLs and `?? []` for lists. Cart lines have no `slug`: use `product_slug` (nullable) |
 | MEDIUM | Missing pagination | All list endpoints return `pagination` — use `page` and `limit` params |
 | LOW | Re-fetching categories | Categories rarely change — cache them client-side |
 

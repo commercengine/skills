@@ -67,9 +67,10 @@ git clone https://github.com/commercengine/skills ~/.claude/skills/commercengine
 | `ce-catalog` | Products, variants & categories | Product listing, search, reviews | Catalog |
 | `ce-cart-checkout` | Cart, checkout & payments | Cart CRUD, checkout flow, hosted checkout | Cart & Checkout |
 | `ce-orders` | Order management & returns | Order history, tracking, returns | Orders |
+| `ce-analytics` | Analytics events & deduplication | Segment/RudderStack tracking, Meta/GA4 dedup with server events | Analytics |
 | `ce-webhooks` | Webhook events & syncing | Real-time events, notifications | Webhooks |
-| `ce-ssr-patterns` | Next.js & TanStack Start patterns | SSR, Server Actions/functions, pre-rendering | Framework Patterns |
-| `ce-ssr` | Custom SSR bindings | SvelteKit, Nuxt, Astro with ssr-utils | Custom SSR |
+| `ce-ssr-patterns` | Next.js, TanStack Start, Astro & SvelteKit patterns | SSR, Server Actions/functions, pre-rendering | Framework Patterns |
+| `ce-ssr` | Custom SSR bindings | Nuxt and other frameworks with ssr-utils | Custom SSR |
 | `ce-seo` | SEO, structured data & agent-readable content | Metadata, JSON-LD, sitemaps, robots.txt, llms.txt | SEO |
 | `ce-ai` | WebMCP agent tools | Letting browser AI agents search, cart and navigate | AI Agents |
 
@@ -104,6 +105,7 @@ CE_API_KEY=your-api-key
 | "Build a product listing page" | `ce-catalog` |
 | "Add cart and checkout" | `ce-cart-checkout` |
 | "Show order history with tracking" | `ce-orders` |
+| "Track add-to-cart and purchases without double counting" | `ce-analytics` |
 | "Set up webhooks for order events" | `ce-webhooks` |
 | "Use Server Actions for cart mutations" | `ce-ssr-patterns` |
 | "Set up TanStack Start with server functions" | `ce-ssr-patterns` |
@@ -132,9 +134,12 @@ commerce-engine-skills/
 │   │   └── references/
 │   ├── orders/                  # Order management
 │   │   └── SKILL.md
+│   ├── analytics/               # Analytics events & dedup
+│   │   ├── SKILL.md
+│   │   └── references/
 │   ├── webhooks/                # Webhook events
 │   │   └── SKILL.md
-│   ├── ssr-patterns/            # Next.js & TanStack Start
+│   ├── ssr-patterns/            # Next.js, TanStack Start, Astro & SvelteKit
 │   │   ├── SKILL.md
 │   │   └── references/
 │   ├── ssr/                     # Custom SSR bindings

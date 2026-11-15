@@ -4,7 +4,7 @@ description: WebMCP agent tools for Commerce Engine storefronts using @commercen
 license: MIT
 metadata:
   author: commercengine
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
@@ -181,6 +181,8 @@ export const routes = {
 };
 ```
 
+`ProductRouteInput.productSlug` is optional, because a listed `Item` may carry no slug. With no custom `routes.product`, such an item's result has `url: null`. A resolver that routes by `productId` (the manifest above does) still gives it a URL, and one that interpolates the slug must check for it first.
+
 `resolveProductRoute` matters as much as `product`. An agent reads a CMS page slug off the page and
 calls `get_product("knee-pain-relief-oil")` — without the inbound mapping that goes straight to a
 catalog which has never heard of it.
@@ -213,6 +215,7 @@ diagnostics: (event) => console.info("[commerce-ai]", event.code, event.message 
 | `registered` | One tool registered (`event.tool` names it) |
 | `registered:N` | Summary after a successful pass |
 | `rollback` | A failure part-way through; everything was unregistered |
+| `aborted` | Cancelled through `config.signal`; everything was unregistered |
 
 `message` is always a printable string, so a single console line never requires narrowing `error` first.
 
@@ -241,6 +244,7 @@ Everything draft-specific is confined to one module, so churn is a change to one
 | CRITICAL | Aborting in the quick start | `registration?.abort()` immediately after registering unregisters everything you just installed. It belongs in a cleanup function. |
 | HIGH | `InvalidStateError: Duplicate tool name` in dev | Two overlapping registrations. Pass `config.signal` so the stale pass is cancelled rather than left live. See "Two Signals". |
 | HIGH | Agent gets a 404 for a product that exists | The CMS slug reached the catalog untranslated. Supply `resolveProductRoute`. |
+| MEDIUM | Treating `price: null` as free or as a failure | A catalog record without pricing returns `null` for `price`, `currency` and the ordering-quantity fields. A product with variants prices each variant, so read `variants[].price`. See `references/tools.md`. |
 | MEDIUM | Cart tools missing with no error | The storefront exposes no `clientStorefront()` / `session()` accessor, so `session` resolved to `null`. Four catalog tools register and nothing complains. |
 
 ## See Also

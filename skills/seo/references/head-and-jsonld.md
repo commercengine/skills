@@ -295,10 +295,18 @@ function useRetireDefaults(head: CommerceSeoHead | null) {
 
 | Product shape | Schema |
 |---------------|--------|
-| `has_variant: false` | `Product` with `offers: Offer` |
-| `has_variant: true` | `ProductGroup` with `hasVariant[]` and `variesBy[]` |
+| `has_variant: false` | `Product`, with `offers: Offer` when `pricing` is set |
+| `has_variant: true` | `ProductGroup` with `hasVariant[]` and `variesBy[]`; each variant carries its own `Offer` when it has pricing |
 
 `AggregateRating` is included automatically when `reviews_count > 0` — do not hand-roll it.
+
+### Records without pricing
+
+`pricing` is nullable on `Product`, `ProductDetail`, `Variant` and `Item`. A product with variants has none of its own (each variant is priced), and any record has none when no pricing is configured. Such records do not throw:
+
+- **JSON-LD** — no `Offer`. `ProductSchema.offers` is optional, so code that reads `schema.offers.price` needs a check.
+- **Open Graph** — `og:price:*` / `product:price:*` state the product's own pricing or, for a product with variants, the `is_default` variant's. With neither, the price tags are left out; `og:type` and availability stay.
+- **Markdown** — no `## Pricing` section and no currency footer, and `-` in the price column of variant, category and search tables.
 
 ### `variesBy`
 

@@ -119,14 +119,18 @@ export default async function ProductsPage() {
 
 ```typescript
 // app/account/page.tsx
+import { redirect } from "next/navigation";
 import { storefront } from "@/lib/storefront";
 
 export default async function AccountPage() {
   const sdk = await storefront.serverStorefront();
-  const { data, error } = await sdk.customer.getCustomer();
+  const userId = await sdk.getUserId();
+  if (!userId || !(await sdk.isLoggedIn())) redirect("/login");
+
+  const { data, error } = await sdk.auth.getUserDetails({ id: userId });
 
   if (error) return <p>Error: {error.message}</p>;
-  return <div>Welcome, {data?.customer?.first_name}</div>;
+  return <div>Welcome, {data?.user?.first_name}</div>;
 }
 ```
 
@@ -157,13 +161,16 @@ export async function addToCartAction(
   variantId: string | null,
 ) {
   const sdk = await storefront.serverStorefront();
-  const { data, error } = await sdk.cart.addDeleteCartItem(
+  const { data, error, events } = await sdk.cart.addDeleteCartItem(
     { id: cartId },
     { product_id: productId, variant_id: variantId, quantity: 1 }
   );
-  return { data: data?.cart, error: error?.message };
+  // `events` carries the server-issued ids of the analytics events this call produced.
+  return { data: data?.cart, events, error: error?.message };
 }
 ```
+
+Cart, order and wishlist mutations return `events` beside `data` and `error`. If the page tracks analytics, return them from the action so the client can pass them to `@commercengine/analytics` and its copy of each event deduplicates against the server's. See `analytics/`.
 
 ### Static Site Generation (SSG)
 
@@ -188,7 +195,7 @@ export default async function ProductPage({
   const { slug } = await params;
   const sdk = storefront.publicStorefront();
   const { data, error } = await sdk.catalog.getProductDetail({
-    product_id_or_slug: slug,
+    product_id: slug, // accepts the product ID or slug
   });
 
   if (error || !data) return <p>Product not found</p>;
@@ -238,7 +245,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const sdk = storefront.publicStorefront();
   const { data } = await sdk.catalog.getProductDetail({
-    product_id_or_slug: slug,
+    product_id: slug,
   });
 
   const product = data?.product;
@@ -250,6 +257,8 @@ export async function generateMetadata({
   };
 }
 ```
+
+For canonical URLs, Open Graph and JSON-LD, use `createProductMetadata` from `@commercengine/seo/nextjs` instead. See `seo/`.
 
 ## Hosted Checkout + Next.js
 

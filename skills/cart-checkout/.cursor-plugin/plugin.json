@@ -2,7 +2,7 @@
   "name": "ce-cart-checkout",
   "displayName": "Commerce Engine Cart & Checkout",
   "description": "Commerce Engine cart management, checkout flow, and payment integration with hosted checkout support",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Commerce Engine",
     "email": "support@commercengine.io"

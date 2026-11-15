@@ -5,7 +5,7 @@ license: MIT
 allowed-tools: Bash
 metadata:
   author: commercengine
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
@@ -192,7 +192,18 @@ If your app imports `@commercengine/storefront` at all and uses `managed` mode, 
 | Set fulfillment | `sdk.cart.updateFulfillmentPreference({ id: cartId }, { fulfillment_type, ... })` |
 | Redeem loyalty | `sdk.cart.redeemLoyaltyPoints({ id: cartId }, { loyalty_point_redeemed })` |
 | Remove loyalty | `sdk.cart.removeLoyaltyPoints({ id: cartId })` |
+| Use credit balance | `sdk.cart.redeemCreditBalance({ id: cartId }, { credit_balance_used })` |
+| Remove credit balance | `sdk.cart.removeCreditBalance({ id: cartId })` |
+| Points / credit available | `sdk.customer.getLoyaltyProgram()`, `sdk.customer.getLoyaltyDetails()`, `sdk.customer.getCreditBalance()` |
+| Delete the user's cart | `sdk.cart.deleteUserCart()` |
 | Create order | `sdk.order.createOrder({ cart_id, payment_method? })` |
+
+#### `events` on Cart Results
+
+`createCart`, `addDeleteCartItem`, `deleteCart`, `deleteUserCart`, `updateCartAddress`, `applyCoupon` and `removeCoupon` (and the wishlist mutations `addToWishlist` / `removeFromWishlist`) return `ApiResult<T, StorefrontResponseEvent>`: `{ data, error, events }`. `data` is unchanged. `events` lists the analytics events the call produced (`Cart Created`, `Product Added`, `Product Removed`, `Cart Deleted`, `Checkout Started`, `Coupon Applied`, `Coupon Removed`), each with a server-issued `event_id`. It is empty on an error, or when the call produced none (a reused cart, removing a coupon when none is applied).
+
+- Tracking in the browser too? Forward `events` to `@commercengine/analytics` so the browser and server copies dedupe. See `analytics/`.
+- Test doubles or wrappers typed with these methods' return types must include `events` (for example `events: []`).
 
 ### Cart Structure
 
@@ -200,12 +211,13 @@ Key fields in the Cart object:
 
 | Field | Description |
 |-------|-------------|
-| `cart_items` | Array of items with `product_id`, `variant_id`, `quantity`, `selling_price` |
+| `cart_items` | Array of items with `product_id`, `variant_id`, `product_slug` (nullable; there is no `slug`), `quantity`, `selling_price` |
 | `subtotal` | Sum of item prices before tax/discounts |
-| `grand_total` | Final total after tax, shipping, discounts |
-| `to_be_paid` | Amount after loyalty points and credit balance deductions |
-| `coupon_code` | Applied coupon (if any) |
+| `grand_total` | Final total after tax, shipping, discounts and redeemed loyalty points |
+| `to_be_paid` | `grand_total` less `credit_balance_used`. Negative when the applied credit exceeds the total; such a cart can't be checked out until the credit is reduced |
+| `coupon_code` | Applied coupon (if any). `coupon_discount_percent` is `null` until a coupon is applied |
 | `loyalty_points_redeemed` | Points applied as discount |
+| `credit_balance_used` | Credit balance applied |
 | `expires_at` | Cart expiration timestamp |
 
 ### Key Patterns
@@ -214,13 +226,14 @@ Key fields in the Cart object:
 
 ```typescript
 // Create a cart (at least one item required — cannot create empty cart)
-const { data, error } = await sdk.cart.createCart({
+const { data, error, events } = await sdk.cart.createCart({
   items: [
     { product_id: "prod_123", variant_id: "var_456", quantity: 2 },
   ],
 });
 
 const cartId = data.cart.id;
+// events: `Product Added` per line, plus `Cart Created` only when a new cart was made
 
 // Add more items to existing cart
 const { data: updated, error: addErr } = await sdk.cart.addDeleteCartItem(
@@ -248,7 +261,7 @@ const { data: removeData, error: removeErr } = await sdk.cart.addDeleteCartItem(
 #### Apply Coupon
 
 ```typescript
-// List available coupons
+// List available coupons: data.coupons is AvailableCoupon[] (the type was `Coupon` before 0.16)
 const { data: coupons } = await sdk.cart.getAvailableCoupons();
 
 // Apply a coupon
@@ -272,14 +285,15 @@ Summary:
 
 1. **Review cart** → `sdk.cart.getCart({ id: cartId })`
 2. **Authenticate** → `sdk.auth.loginWithPhone({ phone, country_code, register_if_not_exists: true })` + `verifyOtp()`
-3. **Set addresses** → `sdk.cart.updateCartAddress({ id: cartId }, { shipping_address_id, billing_address_id })`
+3. **Set addresses** → `sdk.cart.updateCartAddress({ id: cartId }, { shipping_address_id, billing_address_id })` (returns a `Checkout Started` event each time)
 4. **Check deliverability** → `sdk.cart.checkPincodeDeliverability({ cart_id, delivery_pincode })`
 5. **Get fulfillment options** → `sdk.cart.getFulfillmentOptions({ cart_id })`
 6. **Set fulfillment** → `sdk.cart.updateFulfillmentPreference({ id: cartId }, { fulfillment_type, ... })`
-7. **Apply discounts** → coupons, loyalty points
-8. **Create order** → `sdk.order.createOrder({ cart_id, payment_method })` — see payment-patterns.md for payload shapes
-9. **Process payment** → Use `payment_info` from order response
+7. **Apply discounts** → coupons, loyalty points, credit balance
+8. **Create order** → `sdk.order.createOrder({ cart_id, payment_method })` — see payment-patterns.md for payload shapes. Returns the `Order Created` event in `events`
+9. **Process payment** → Use `payment_info` from order response (`null` when no gateway payment is started)
 10. **Poll payment status** → `sdk.order.getPaymentStatus(orderNumber)`
+11. **Failed payment** → `sdk.order.retryOrderPayment()` when `is_retry_available`; pay the rest or split it with `sdk.order.createOrderPaymentRequest()` (see payment-patterns.md)
 
 ## Common Pitfalls
 
@@ -290,8 +304,13 @@ Summary:
 | CRITICAL | Cart expired | Check `expires_at` — create new cart if expired |
 | HIGH | Adding product instead of variant | When product `has_variant: true`, must specify `variant_id` |
 | HIGH | Missing address before checkout | Must set billing/shipping address before creating order |
+| HIGH | Test doubles or wrappers for cart/order mutations without `events` | These methods return `ApiResult<T, StorefrontResponseEvent>`, which requires `events` (use `events: []`) |
+| HIGH | Tracking cart events in the browser without the server's `event_id` | Forward the result's `events` to `@commercengine/analytics` so browser and server copies dedupe — see `analytics/` |
+| HIGH | Reading `slug` on cart items | Removed in 0.16 — use `product_slug`, which can be `null` |
 | MEDIUM | Not checking fulfillment | Always check `checkPincodeDeliverability()` after setting address |
-| MEDIUM | Ignoring `to_be_paid` | Display `to_be_paid` not `grand_total` — it accounts for loyalty/credit |
+| MEDIUM | Ignoring `to_be_paid` | Display `to_be_paid` not `grand_total` — it deducts the credit balance used |
+| MEDIUM | Importing `Coupon` / `Promotion` types | Renamed to `AvailableCoupon` / `AvailablePromotion` in 0.16 |
+| MEDIUM | Assuming `payment_info` is always set | It is `null` when no gateway payment starts: nothing left to pay, a credit-line order, a manual method or a bank transfer |
 
 ## See Also
 
@@ -299,6 +318,7 @@ Summary:
 - `auth/` - Login required for some cart operations
 - `catalog/` - Product data for cart items
 - `orders/` - After checkout, order management
+- `analytics/` - Browser tracking from cart and order results, deduplicated with `events`
 
 ## Documentation
 

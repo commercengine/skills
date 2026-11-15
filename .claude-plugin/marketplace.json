@@ -7,14 +7,14 @@
     "email": "support@commercengine.io"
   },
   "metadata": {
-    "version": "1.0.0",
-    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, webhooks, SSR/meta-framework patterns (Next.js, TanStack Start, Astro, SvelteKit), SEO, and AI agent tools"
+    "version": "1.1.0",
+    "description": "Complete Commerce Engine toolkit with router for SDK setup, authentication, catalog, cart/checkout, orders, analytics, webhooks, SSR/meta-framework patterns (Next.js, TanStack Start, Astro, SvelteKit), SEO, and AI agent tools"
   },
   "plugins": [
     {
       "name": "ce",
       "description": "Commerce Engine router - automatically routes to the right skill based on your e-commerce task",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -29,7 +29,7 @@
     {
       "name": "ce-setup",
       "description": "Set up the Commerce Engine TypeScript SDK in any project with framework detection and token storage selection",
-      "version": "1.0.0",
+      "version": "1.2.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -43,8 +43,8 @@
     },
     {
       "name": "ce-auth",
-      "description": "Commerce Engine authentication - anonymous auth, OTP login (email/phone/WhatsApp), password auth, token refresh, user profile management",
-      "version": "1.0.0",
+      "description": "Commerce Engine authentication - anonymous auth, OTP login (email/phone/WhatsApp), password auth, token refresh, account recovery, user profile and customer attribute management",
+      "version": "1.2.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -59,7 +59,7 @@
     {
       "name": "ce-catalog",
       "description": "Commerce Engine product catalog - products, variants, SKUs, categories, faceted search, reviews, and recommendations",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -74,7 +74,7 @@
     {
       "name": "ce-cart-checkout",
       "description": "Commerce Engine cart management, checkout flow, and payment integration with hosted checkout support",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -89,7 +89,7 @@
     {
       "name": "ce-orders",
       "description": "Commerce Engine order management - create orders, shipment tracking, payment status, cancellation, returns, and refunds",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -102,15 +102,30 @@
       "keywords": ["orders", "returns", "shipments", "payments", "tracking"]
     },
     {
-      "name": "ce-webhooks",
-      "description": "Commerce Engine webhook events - 14 event types for orders, payments, refunds, and shipments with signature verification",
+      "name": "ce-analytics",
+      "description": "Segment / RudderStack e-commerce analytics for Commerce Engine storefronts using @commercengine/analytics. Maps products, carts, orders and users to Segment spec events, deduplicates browser events against Commerce Engine's server-side copies with the events storefront SDK mutations return, identifies users after login, and collects ad-platform click identifiers.",
       "version": "1.0.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
       },
+      "source": "./skills/analytics",
+      "homepage": "https://www.commercengine.io/docs/sdk",
+      "repository": "https://github.com/commercengine/skills",
+      "license": "MIT",
+      "category": "ecommerce",
+      "keywords": ["analytics", "segment", "rudderstack", "ecommerce-events", "deduplication", "event-id", "meta-pixel", "conversions-api", "ga4", "identify", "cdp"]
+    },
+    {
+      "name": "ce-webhooks",
+      "description": "Commerce Engine webhooks - 241 signed events across orders, payments, shipping, carts, catalog, customers, store and marketplace, with X-CE-Signature verification, event_id idempotency and retry handling",
+      "version": "1.1.0",
+      "author": {
+        "name": "Commerce Engine",
+        "email": "support@commercengine.io"
+      },
       "source": "./skills/webhooks",
-      "homepage": "https://www.commercengine.io/docs/sdk/nodejs-integration",
+      "homepage": "https://llm-docs.commercengine.io/webhooks/",
       "repository": "https://github.com/commercengine/skills",
       "license": "MIT",
       "category": "ecommerce",
@@ -118,8 +133,8 @@
     },
     {
       "name": "ce-ssr-patterns",
-      "description": "SSR/meta-framework patterns for Commerce Engine - Next.js and TanStack Start with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions/actions, pre-rendering, and token management",
-      "version": "1.0.0",
+      "description": "SSR/meta-framework patterns for Commerce Engine storefronts using @commercengine/storefront. Covers Next.js, TanStack Start, Astro, and SvelteKit with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions/actions, pre-rendering, and cookie-based token management.",
+      "version": "2.1.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -129,12 +144,12 @@
       "repository": "https://github.com/commercengine/skills",
       "license": "MIT",
       "category": "ecommerce",
-      "keywords": ["nextjs", "tanstack-start", "ssr", "server-actions", "server-functions", "cookies", "storefront", "pre-rendering"]
+      "keywords": ["nextjs", "tanstack-start", "astro", "sveltekit", "ssr", "server-actions", "server-functions", "cookies", "storefront", "pre-rendering"]
     },
     {
       "name": "ce-ssr",
-      "description": "Build custom SSR bindings with @commercengine/ssr-utils for SvelteKit, Nuxt, Astro. CookieAdapter, ServerTokenStorage, and public vs session patterns.",
-      "version": "2.0.0",
+      "description": "Build custom SSR bindings with @commercengine/ssr-utils for frameworks without a first-party Commerce Engine wrapper (Nuxt and other unsupported frameworks). CookieAdapter, ServerTokenStorage, and public vs session patterns.",
+      "version": "2.1.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -144,12 +159,12 @@
       "repository": "https://github.com/commercengine/skills",
       "license": "MIT",
       "category": "ecommerce",
-      "keywords": ["ssr", "ssg", "cookies", "token-storage", "ssr-utils", "sveltekit", "nuxt", "astro"]
+      "keywords": ["ssr", "ssg", "cookies", "token-storage", "ssr-utils", "nuxt", "h3", "custom-binding"]
     },
     {
       "name": "ce-seo",
-      "description": "Commerce Engine SEO - head metadata, JSON-LD (Product/ProductGroup with variesBy), canonical URLs, robots.txt, sitemaps, llms.txt, Markdown mirrors, and CMS-owned route records for React SPA, Next.js, Astro, SvelteKit, and TanStack Start",
-      "version": "1.1.0",
+      "description": "SEO and agent-readable content for Commerce Engine storefronts using @commercengine/seo. Route records for CMS-owned URLs, head metadata, JSON-LD (Product/ProductGroup with variesBy), canonical URLs, robots.txt, sitemaps, llms.txt, and Markdown mirrors across React SPA, Next.js, Astro, SvelteKit, and TanStack Start.",
+      "version": "1.2.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -159,12 +174,12 @@
       "repository": "https://github.com/commercengine/skills",
       "license": "MIT",
       "category": "ecommerce",
-      "keywords": ["seo", "json-ld", "schema-org", "sitemap", "robots", "llms-txt", "metadata", "canonical", "structured-data"]
+      "keywords": ["seo", "json-ld", "schema-org", "sitemap", "robots", "llms-txt", "metadata", "canonical", "markdown-mirror", "structured-data"]
     },
     {
       "name": "ce-ai",
-      "description": "Commerce Engine agent tools - WebMCP tools exposing catalog search, product/variant lookup, real cart mutations, navigation, and session state to browser AI agents, with registration lifecycle and CMS slug resolution",
-      "version": "1.1.0",
+      "description": "WebMCP agent tools for Commerce Engine storefronts using @commercengine/ai. Exposes catalog search, product/variant lookup, real cart mutations, navigation, and session state to browser AI agents via document.modelContext.",
+      "version": "1.2.0",
       "author": {
         "name": "Commerce Engine",
         "email": "support@commercengine.io"
@@ -174,7 +189,7 @@
       "repository": "https://github.com/commercengine/skills",
       "license": "MIT",
       "category": "ecommerce",
-      "keywords": ["webmcp", "ai-agents", "model-context", "agent-tools", "mcp", "cart-tools", "shopping-agent"]
+      "keywords": ["webmcp", "ai-agents", "model-context", "agent-tools", "mcp", "cart-tools", "catalog-tools", "shopping-agent"]
     }
   ]
 }

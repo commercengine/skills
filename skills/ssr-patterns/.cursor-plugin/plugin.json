@@ -1,8 +1,8 @@
 {
   "name": "ce-ssr-patterns",
   "displayName": "Commerce Engine SSR Patterns",
-  "description": "SSR/meta-framework patterns for Commerce Engine - Next.js and TanStack Start with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions/actions, pre-rendering, and token management",
-  "version": "1.0.0",
+  "description": "SSR/meta-framework patterns for Commerce Engine - Next.js, TanStack Start, Astro, and SvelteKit with publicStorefront(), clientStorefront(), serverStorefront(), bootstrap, server functions/actions, pre-rendering, and token management",
+  "version": "2.1.0",
   "author": {
     "name": "Commerce Engine",
     "email": "support@commercengine.io"
@@ -11,6 +11,6 @@
   "homepage": "https://www.commercengine.io/docs/sdk",
   "repository": "https://github.com/commercengine/skills",
   "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
-  "keywords": ["nextjs", "tanstack-start", "ssr", "server-actions", "server-functions", "cookies", "storefront", "pre-rendering"],
+  "keywords": ["nextjs", "tanstack-start", "astro", "sveltekit", "ssr", "server-actions", "server-functions", "cookies", "storefront", "pre-rendering"],
   "skills": "."
 }

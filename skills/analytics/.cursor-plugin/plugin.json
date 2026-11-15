@@ -1,0 +1,16 @@
+{
+  "name": "ce-analytics",
+  "displayName": "Commerce Engine Analytics",
+  "description": "Segment / RudderStack e-commerce analytics for Commerce Engine storefronts using @commercengine/analytics. Maps products, carts, orders and users to Segment spec events, deduplicates browser events against Commerce Engine's server-side copies with the events storefront SDK mutations return, identifies users after login, and collects ad-platform click identifiers.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Commerce Engine",
+    "email": "support@commercengine.io"
+  },
+  "license": "MIT",
+  "homepage": "https://www.commercengine.io/docs/sdk",
+  "repository": "https://github.com/commercengine/skills",
+  "logo": "https://images.tarkai.com/Commerce_Engine/CE%20Logo%20Glyph.png",
+  "keywords": ["analytics", "segment", "rudderstack", "ecommerce-events", "deduplication", "event-id", "meta-pixel", "conversions-api", "ga4", "identify", "cdp"],
+  "skills": "."
+}

@@ -16,11 +16,11 @@ Import the SvelteKit wrapper from `@commercengine/storefront/sveltekit`. Server-
 // src/lib/storefront-config.ts
 import { Environment } from "@commercengine/storefront";
 import type { SvelteKitStorefrontConfig } from "@commercengine/storefront/sveltekit";
-import { env } from "$env/static/public";
+import { PUBLIC_API_KEY, PUBLIC_STORE_ID } from "$env/static/public";
 
 export const storefrontConfig: SvelteKitStorefrontConfig = {
-  storeId: env.PUBLIC_STORE_ID,
-  apiKey: env.PUBLIC_API_KEY,
+  storeId: PUBLIC_STORE_ID,
+  apiKey: PUBLIC_API_KEY,
   environment: Environment.Staging,
   tokenStorageOptions: { prefix: "myapp_" },
 };
@@ -72,7 +72,7 @@ PUBLIC_STORE_ID=your-store-id
 PUBLIC_API_KEY=your-api-key
 ```
 
-SvelteKit uses the `PUBLIC_` prefix for client-exposed env vars (accessed via `$env/static/public`).
+SvelteKit uses the `PUBLIC_` prefix for client-exposed env vars, imported by name from `$env/static/public`. They are not on `import.meta.env`, which Vite limits to `VITE_` variables. SvelteKit 3 still serves `$env/static/public` but deprecates it in favour of `$app/env/public`.
 
 ## Accessor Rules
 
@@ -118,10 +118,13 @@ import { redirect } from "@sveltejs/kit";
 
 export async function load({ cookies }) {
   const sdk = serverStorefront.serverStorefront(cookies);
-  const { data, error } = await sdk.customer.getCustomer();
+  const userId = await sdk.getUserId();
+  if (!userId || !(await sdk.isLoggedIn())) redirect(302, "/login");
+
+  const { data, error } = await sdk.auth.getUserDetails({ id: userId });
 
   if (error) redirect(302, "/login");
-  return { customer: data?.customer };
+  return { user: data?.user };
 }
 ```
 
@@ -154,13 +157,13 @@ export const actions = {
     const cartId = formData.get("cartId") as string;
 
     const sdk = serverStorefront.serverStorefront(cookies);
-    const { data, error } = await sdk.cart.addDeleteCartItem(
+    const { data, error, events } = await sdk.cart.addDeleteCartItem(
       { id: cartId },
       { product_id: productId, variant_id: variantId, quantity: 1 }
     );
 
     if (error) return fail(400, { error: error.message });
-    return { cart: data?.cart };
+    return { cart: data?.cart, events };
   },
 
   addToWishlist: async ({ cookies, request }) => {
@@ -168,16 +171,18 @@ export const actions = {
     const productId = formData.get("productId") as string;
 
     const sdk = serverStorefront.serverStorefront(cookies);
-    const { data, error } = await sdk.cart.addToWishlist({
+    const { data, error, events } = await sdk.cart.addToWishlist({
       product_id: productId,
       variant_id: null,
     });
 
     if (error) return fail(400, { error: error.message });
-    return { wishlist: data };
+    return { wishlist: data, events };
   },
 };
 ```
+
+Cart, order and wishlist mutations return `events` beside `data` and `error`: the analytics events the call produced, each with a server-issued `event_id`. If the page tracks analytics, return them from the action (or API route) so the client can pass them to `@commercengine/analytics` and its copy of each event deduplicates against the server's. See `analytics/`.
 
 ### API Routes
 
@@ -197,13 +202,13 @@ export async function GET({ cookies }) {
 export async function POST({ cookies, request }) {
   const body = await request.json();
   const sdk = serverStorefront.serverStorefront(cookies);
-  const { data, error: apiError } = await sdk.cart.addToWishlist({
+  const { data, error: apiError, events } = await sdk.cart.addToWishlist({
     product_id: body.productId,
     variant_id: body.variantId ?? null,
   });
 
   if (apiError) error(500, apiError.message);
-  return json(data);
+  return json({ wishlist: data, events });
 }
 ```
 
@@ -212,7 +217,7 @@ export async function POST({ cookies, request }) {
 ```typescript
 // src/hooks.server.ts
 import { serverStorefront } from "$lib/server/storefront";
-import type { Handle } from "@sveltejs/kit";
+import type { Handle } from "@sveltejs/kit/hooks"; // SvelteKit 3. On SvelteKit 2: from "@sveltejs/kit"
 
 export const handle: Handle = async ({ event, resolve }) => {
   const sdk = serverStorefront.serverStorefront(event.cookies);
@@ -227,6 +232,8 @@ export const handle: Handle = async ({ event, resolve }) => {
   return resolve(event);
 };
 ```
+
+SvelteKit 3 moved `Handle` to `@sveltejs/kit/hooks`, where `sequence()` already lives, and `@sveltejs/kit` no longer exports it. To combine this hook with another, such as `createSvelteKitSeoHandle` from `@commercengine/seo/sveltekit/server`, use `sequence()`.
 
 To make `event.locals.userId` type-safe, declare it in `app.d.ts`:
 
@@ -269,7 +276,7 @@ In Svelte components, use the client accessors directly:
 Session-bound operations:
 
 ```svelte
-<script>
+<script lang="ts">
   import { storefront } from "$lib/storefront";
 
   async function addToWishlist(productId: string) {
@@ -295,7 +302,7 @@ export const prerender = true;
 export async function load({ params }) {
   const sdk = storefront.publicStorefront();
   const { data, error } = await sdk.catalog.getProductDetail({
-    product_id_or_slug: params.slug,
+    product_id: params.slug, // accepts the product ID or slug
   });
 
   if (error || !data) return { product: null };
@@ -330,6 +337,7 @@ Bootstrap checkout after the storefront session is established:
 <!-- src/routes/+layout.svelte -->
 <script>
   import { onMount, onDestroy } from "svelte";
+  import { PUBLIC_API_KEY, PUBLIC_STORE_ID } from "$env/static/public";
   import { storefront } from "$lib/storefront";
 
   onMount(async () => {
@@ -341,8 +349,8 @@ Bootstrap checkout after the storefront session is established:
 
     const { initCheckout } = await import("@commercengine/checkout");
     initCheckout({
-      storeId: import.meta.env.PUBLIC_STORE_ID,
-      apiKey: import.meta.env.PUBLIC_API_KEY,
+      storeId: PUBLIC_STORE_ID,
+      apiKey: PUBLIC_API_KEY,
       authMode: "provided",
       accessToken: accessToken ?? undefined,
       refreshToken: refreshToken ?? undefined,

@@ -69,7 +69,18 @@ import { seo } from "$lib/commerce-seo";
 export const handle = createSvelteKitSeoHandle(seo, { robots: true, sitemap: true });
 ```
 
-Compose with `sequence()` if you already have a handle.
+Compose with `sequence()` if you already have a handle:
+
+```typescript
+import { sequence } from "@sveltejs/kit/hooks";
+import type { Handle } from "@sveltejs/kit/hooks";   // SvelteKit 3. On SvelteKit 2: from "@sveltejs/kit"
+
+const auth: Handle = async ({ event, resolve }) => resolve(event);
+
+export const handle = sequence(createSvelteKitSeoHandle(seo, { robots: true, sitemap: true }), auth);
+```
+
+`createSvelteKitSeoHandle` returns `SvelteKitSeoHandle`, a structural hook type, because SvelteKit 3 moved `Handle` from `@sveltejs/kit` to `@sveltejs/kit/hooks`. Both versions accept it as a `Handle` and in `sequence()`, so do not cast it.
 
 ### TanStack Start
 

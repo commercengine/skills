@@ -89,7 +89,7 @@ PUBLIC_API_KEY=your-api-key
 | Browser scripts / client islands | `storefront.clientStorefront()` | `src/lib/storefront` |
 | Client bootstrap | `storefront.bootstrap()` | `src/lib/storefront` |
 | SSR pages (`.astro` with `output: "server"`) | `serverStorefront.serverStorefront(Astro.cookies)` | `src/lib/server-storefront` |
-| API routes (`+server.ts`) | `serverStorefront.serverStorefront(context.cookies)` | `src/lib/server-storefront` |
+| API routes (`src/pages/api/*.ts`) | `serverStorefront.serverStorefront(context.cookies)` | `src/lib/server-storefront` |
 | Middleware | `serverStorefront.serverStorefront(context.cookies)` | `src/lib/server-storefront` |
 
 **Key distinction**: Astro's `serverStorefront()` requires passing `Astro.cookies` (or `context.cookies`) at the call site because Astro has no global request context. This is synchronous — no `await` needed.
@@ -120,12 +120,14 @@ const categories = data?.categories ?? [];
 import { serverStorefront } from "../lib/server-storefront";
 
 const sdk = serverStorefront.serverStorefront(Astro.cookies);
-const { data, error } = await sdk.customer.getCustomer();
+const userId = await sdk.getUserId();
+if (!userId || !(await sdk.isLoggedIn())) return Astro.redirect("/login");
 
+const { data, error } = await sdk.auth.getUserDetails({ id: userId });
 if (error) return Astro.redirect("/login");
 ---
 
-<h1>Welcome, {data?.customer?.first_name}</h1>
+<h1>Welcome, {data?.user?.first_name}</h1>
 ```
 
 ### API Route (Session-Bound)
@@ -146,15 +148,17 @@ export const GET: APIRoute = async ({ cookies }) => {
 export const POST: APIRoute = async ({ cookies, request }) => {
   const body = await request.json();
   const sdk = serverStorefront.serverStorefront(cookies);
-  const { data, error } = await sdk.cart.addToWishlist({
+  const { data, error, events } = await sdk.cart.addToWishlist({
     product_id: body.productId,
     variant_id: body.variantId ?? null,
   });
 
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-  return new Response(JSON.stringify(data));
+  return new Response(JSON.stringify({ wishlist: data, events }));
 };
 ```
+
+Cart, order and wishlist mutations return `events` beside `data` and `error`: the analytics events the call produced, each with a server-issued `event_id`. If the page tracks analytics, include them in the response so the client can pass them to `@commercengine/analytics` and its copy of each event deduplicates against the server's. See `analytics/`.
 
 ### Client-Side Fetching (After Hydration)
 

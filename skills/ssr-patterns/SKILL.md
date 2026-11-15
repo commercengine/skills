@@ -5,7 +5,7 @@ license: MIT
 allowed-tools: Bash
 metadata:
   author: commercengine
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
@@ -74,6 +74,20 @@ const { data: wishlist } = await sessionSdk.cart.getWishlist();
 
 The session-aware overloads resolve `user_id` automatically — no manual ID passing needed.
 
+### Mutations Return `events`
+
+Cart, order and wishlist mutations return `ApiResult<T, StorefrontResponseEvent>`: `{ data, error, events }`. They are `sdk.cart.createCart`, `addDeleteCartItem`, `deleteCart`, `deleteUserCart`, `updateCartAddress`, `applyCoupon`, `removeCoupon`, `addToWishlist`, `removeFromWishlist`, and `sdk.order.createOrder` and `cancelOrder`. `events` lists the analytics events the call produced, each with a server-issued `event_id`, and is empty on an error.
+
+```typescript
+const { data, error, events } = await sdk.cart.addDeleteCartItem(
+  { id: cartId },
+  { product_id: productId, variant_id: variantId, quantity: 1 }
+);
+return { cart: data?.cart, events, error: error?.message };
+```
+
+When a server action, server function or API route runs the mutation and the page tracks analytics, return `events` with the result. The client passes them to `@commercengine/analytics`, and its copy of each event deduplicates against Commerce Engine's server copy. See `analytics/`.
+
 ## Framework Quick Reference
 
 | Framework | Import | Factory | Server Entry | Server Accessor | Env Prefix | Reference |
@@ -90,7 +104,7 @@ All imports above are subpaths of `@commercengine/storefront`. See the framework
 When using Hosted Checkout with an SSR framework, the Storefront SDK remains the session owner. Wire `onTokensUpdated` in the storefront config so checkout stays in sync on the client side:
 
 ```typescript
-// In storefront config (both frameworks)
+// In storefront config (every framework)
 onTokensUpdated: (accessToken, refreshToken) => {
   if (typeof window !== "undefined") {
     void import("@commercengine/checkout").then(({ getCheckout }) => {
@@ -138,6 +152,7 @@ useEffect(() => {
 | HIGH | Missing bootstrap component in root layout | Mount a client component calling `storefront.bootstrap()` once in the root layout |
 | HIGH | Bootstrapping anonymous auth in SSG/pre-render code | Use `publicStorefront()` instead — pre-render code must not create sessions |
 | MEDIUM | Fetching session-aware data in the root layout | Move it into a request-aware boundary and use the server accessor |
+| MEDIUM | Server action returns only `data` from a cart, order or wishlist mutation | Return `events` too when the page tracks analytics, so the browser copy of each event can deduplicate. See `analytics/` |
 
 ## See Also
 
@@ -145,6 +160,8 @@ useEffect(() => {
 - `ssr/` - Custom SSR bindings with `@commercengine/ssr-utils` (Nuxt and other unsupported frameworks)
 - `auth/` - Authentication flows
 - `cart-checkout/` - Cart and Hosted Checkout patterns
+- `analytics/` - Forwarding mutation `events` to `@commercengine/analytics`
+- `seo/` - Head metadata, JSON-LD, sitemaps and Markdown mirrors with `@commercengine/seo`
 
 ## Documentation
 

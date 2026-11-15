@@ -5,7 +5,7 @@ license: MIT
 allowed-tools: Bash
 metadata:
   author: commercengine
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 > **LLM Docs Header**: All requests to `https://llm-docs.commercengine.io` **must** include the `Accept: text/markdown` header (or append `.md` to the URL path). Without it, responses return HTML instead of parseable markdown.
